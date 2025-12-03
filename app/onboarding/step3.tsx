@@ -1,17 +1,87 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { makeRedirectUri, ResponseType, useAuthRequest } from 'expo-auth-session';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { SafeAreaView, Text, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useEffect, useState } from 'react';
+import { Platform, SafeAreaView, Text, View } from 'react-native';
+
+import LoginFailModal from '../../components/auth/LoginFailModal';
 import Button from '../../components/ui/Button';
 import { useAuthStore } from '../../store/authStore';
 
+WebBrowser.maybeCompleteAuthSession();
+
+// Kakao Endpoint
+const discovery = {
+    authorizationEndpoint: 'https://kauth.kakao.com/oauth/authorize',
+    tokenEndpoint: 'https://kauth.kakao.com/oauth/token',
+};
+
 export default function OnboardingStep3() {
     const router = useRouter();
-    const login = useAuthStore((state) => state.login);
+    const { login, setError, error } = useAuthStore();
+    const [modalVisible, setModalVisible] = useState(false);
 
-    const handleLogin = () => {
-        login();
-        router.replace('/'); // Navigate to main app
+    // Kakao Auth Request
+    // REPLACE 'YOUR_KAKAO_REST_API_KEY' with actual key if available, or use a placeholder
+    const [request, response, promptAsync] = useAuthRequest(
+        {
+            clientId: 'YOUR_KAKAO_REST_API_KEY', // TODO: User needs to provide this
+            scopes: ['profile_nickname', 'profile_image'],
+            redirectUri: makeRedirectUri({
+                scheme: 'your.app.scheme' // TODO: Configure scheme in app.json
+            }),
+            responseType: ResponseType.Code,
+        },
+        discovery
+    );
+
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { code } = response.params;
+            // Here you would normally exchange code for token
+            console.log('Kakao Auth Code:', code);
+            login('kakao');
+            router.replace('/');
+        } else if (response?.type === 'error') {
+            setError('카카오 로그인에 실패했습니다.');
+            setModalVisible(true);
+        }
+    }, [response]);
+
+    const handleAppleLogin = async () => {
+        try {
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+            });
+            // signed in
+            console.log('Apple Credential:', credential);
+            login('apple');
+            router.replace('/');
+        } catch (e: any) {
+            if (e.code === 'ERR_REQUEST_CANCELED') {
+                // handle that the user canceled the sign-in flow
+            } else {
+                setError('애플 로그인에 실패했습니다.');
+                setModalVisible(true);
+            }
+        }
+    };
+
+    const handleKakaoLogin = () => {
+        // For demo purposes, if no client ID, just mock success or fail
+        // promptAsync(); 
+
+        // MOCKING for now since we don't have API Key
+        // To test failure, uncomment the next line:
+        // setError('카카오 로그인 실패 테스트'); setModalVisible(true); return;
+
+        login('kakao');
+        router.replace('/');
     };
 
     return (
@@ -36,16 +106,24 @@ export default function OnboardingStep3() {
                     <Button
                         title="카카오 시작하기"
                         variant="kakao"
-                        onPress={handleLogin}
+                        onPress={handleKakaoLogin}
                         icon={<Ionicons name="chatbubble-sharp" size={20} color="black" />}
                     />
-                    <Button
-                        title="애플 시작하기"
-                        variant="apple"
-                        onPress={handleLogin}
-                        icon={<Ionicons name="logo-apple" size={20} color="white" />}
-                    />
+                    {Platform.OS === 'ios' && (
+                        <Button
+                            title="애플 시작하기"
+                            variant="apple"
+                            onPress={handleAppleLogin}
+                            icon={<Ionicons name="logo-apple" size={20} color="white" />}
+                        />
+                    )}
                 </View>
+
+                <LoginFailModal
+                    visible={modalVisible}
+                    onClose={() => setModalVisible(false)}
+                    message={error || '로그인에 실패했습니다.'}
+                />
             </View>
         </SafeAreaView>
     );
