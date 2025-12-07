@@ -6,6 +6,7 @@ interface ButtonProps {
     onPress: () => void;
     variant?: 'primary' | 'kakao' | 'apple' | 'outline';
     isLoading?: boolean;
+    disabled?: boolean;
     className?: string;
     textClassName?: string;
     icon?: React.ReactNode;
@@ -16,41 +17,49 @@ const Button = ({
     onPress,
     variant = 'primary',
     isLoading = false,
+    disabled = false,
     className = '',
     textClassName = '',
     icon
 }: ButtonProps) => {
 
+    const isDisabled = isLoading || disabled;
+
     let bgClass = 'bg-primary';
     let textClass = 'text-white';
     let borderClass = '';
 
-    switch (variant) {
-        case 'kakao':
-            bgClass = 'bg-kakao';
-            textClass = 'text-black';
-            break;
-        case 'apple':
-            bgClass = 'bg-apple';
-            textClass = 'text-white';
-            break;
-        case 'outline':
-            bgClass = 'bg-transparent';
-            textClass = 'text-primary';
-            borderClass = 'border border-primary';
-            break;
-        default:
-            bgClass = 'bg-primary';
-            textClass = 'text-white';
-            break;
+    if (isDisabled) {
+        bgClass = 'bg-gray-300';
+        textClass = 'text-gray-500';
+    } else {
+        switch (variant) {
+            case 'kakao':
+                bgClass = 'bg-kakao';
+                textClass = 'text-black';
+                break;
+            case 'apple':
+                bgClass = 'bg-apple';
+                textClass = 'text-white';
+                break;
+            case 'outline':
+                bgClass = 'bg-transparent';
+                textClass = 'text-primary';
+                borderClass = 'border border-primary';
+                break;
+            default:
+                bgClass = 'bg-primary';
+                textClass = 'text-white';
+                break;
+        }
     }
 
     return (
         <TouchableOpacity
             onPress={onPress}
-            disabled={isLoading}
+            disabled={isDisabled}
             className={`w-full py-4 rounded-xl flex-row justify-center items-center ${bgClass} ${borderClass} ${className}`}
-            activeOpacity={0.8}
+            activeOpacity={isDisabled ? 1 : 0.8}
         >
             {isLoading ? (
                 <ActivityIndicator color={variant === 'kakao' ? '#000' : '#fff'} />
