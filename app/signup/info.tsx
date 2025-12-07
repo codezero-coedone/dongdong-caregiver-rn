@@ -135,7 +135,7 @@ export default function SignupInfoScreen() {
             isDomestic,
         });
         // Navigate to terms screen
-        router.push('/signup/terms');
+        router.replace('/signup/terms');
     };
 
     return (
