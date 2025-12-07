@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import AddressInput from '../../components/ui/AddressInput';
 import Button from '../../components/ui/Button';
+import DaumPostcode, { PostcodeData } from '../../components/ui/DaumPostcode';
 import FileUploadBox from '../../components/ui/FileUploadBox';
 import Input from '../../components/ui/Input';
 import MaskedRRNInput from '../../components/ui/MaskedRRNInput';
@@ -33,6 +34,7 @@ export default function CaregiverInfoScreen() {
     const [criminalRecordFile, setCriminalRecordFile] = useState<{ uri: string; name: string } | null>(
         caregiverInfo?.criminalRecordFile || null
     );
+    const [showPostcode, setShowPostcode] = useState(false);
 
     // React Hook Form
     const { control, handleSubmit, formState: { errors }, setValue, watch } = useForm<CaregiverFormData>({
@@ -65,19 +67,13 @@ export default function CaregiverInfoScreen() {
     };
 
     const handleAddressSearch = () => {
-        // TODO: Implement address search (Kakao Address API WebView)
-        // For now, show a mock address
-        Alert.alert(
-            '주소 검색',
-            '주소 검색 기능은 추후 구현 예정입니다.\n임시로 주소를 입력합니다.',
-            [
-                { text: '취소', style: 'cancel' },
-                {
-                    text: '확인',
-                    onPress: () => setValue('address', '서울시 강남구 테헤란로 123'),
-                },
-            ]
-        );
+        setShowPostcode(true);
+    };
+
+    const handleAddressSelected = (data: PostcodeData) => {
+        // Use road address if available, otherwise use jibun address
+        const selectedAddress = data.roadAddress || data.jibunAddress || data.address;
+        setValue('address', selectedAddress);
     };
 
     const handleFileUpload = async () => {
@@ -252,6 +248,13 @@ export default function CaregiverInfoScreen() {
             <View className="p-6 border-t border-gray-100">
                 <Button title="다음" onPress={handleSubmit(onSubmit)} />
             </View>
+
+            {/* Daum Postcode Modal */}
+            <DaumPostcode
+                visible={showPostcode}
+                onClose={() => setShowPostcode(false)}
+                onSelected={handleAddressSelected}
+            />
         </SafeAreaView>
     );
 }
