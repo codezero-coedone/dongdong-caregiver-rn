@@ -6,8 +6,20 @@
       "@/*": [
         "./*"
       ],
+      "@/components/*": [
+        "./components/*"
+      ],
+      "@/constants/*": [
+        "./constants/*"
+      ],
       "@/services/*": [
         "./services/*"
+      ],
+      "@/store/*": [
+        "./store/*"
+      ],
+      "@/hooks/*": [
+        "./hooks/*"
       ]
     }
   },
@@ -15,6 +27,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "nativewind-env.d.ts"
   ]
 }

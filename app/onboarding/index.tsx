@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { SafeAreaView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
+import Header from '../../components/ui/Header';
 
 export default function OnboardingStep1() {
     const router = useRouter();
@@ -9,10 +11,7 @@ export default function OnboardingStep1() {
     return (
         <SafeAreaView className="flex-1 bg-white">
             <View className="flex-1 px-6 pt-10">
-                <View className="flex-row justify-between items-center mb-10">
-                    <Text className="text-lg font-bold">로그인</Text>
-                    <Text className="text-lg">A</Text>
-                </View>
+                <Header title="로그인" rightElement={<Text className="text-lg">A</Text>} />
 
                 <Text className="text-2xl font-bold text-center mb-4">
                     안심되는 돌봄 시작

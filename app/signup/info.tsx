@@ -1,12 +1,16 @@
 import { requestPhoneVerification, verifyPhoneCode } from '@/services/authService';
+import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import Typography from '../../components/ui/Typography';
 
 export default function SignupInfoScreen() {
     const router = useRouter();
+    const { completeSignup } = useAuthStore();
     const [isDomestic, setIsDomestic] = useState(true);
 
     // Form State
@@ -22,7 +26,7 @@ export default function SignupInfoScreen() {
     const [timer, setTimer] = useState(0);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let interval: any;
         if (timer > 0) {
             interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
@@ -77,30 +81,64 @@ export default function SignupInfoScreen() {
             return;
         }
         // Proceed to next step or complete signup
-        Alert.alert('성공', '회원가입 정보 입력이 완료되었습니다.');
-        // router.push('/next-step');
+        Alert.alert('성공', '회원가입 정보 입력이 완료되었습니다.', [
+            {
+                text: '확인',
+                onPress: () => {
+                    completeSignup();
+                    // Redirection handled by _layout
+                }
+            }
+        ]);
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
-            <View className="px-4 py-4 border-b border-gray-100">
-                <Text className="text-lg font-bold text-center">회원가입</Text>
-            </View>
+        <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
 
             <ScrollView className="flex-1 px-6 pt-6">
                 {/* Toggle */}
-                <View className="flex-row mb-8 border border-gray-200 rounded-lg overflow-hidden">
+                <View className="flex-row mb-8 overflow-hidden">
                     <TouchableOpacity
-                        className={`flex-1 py-3 items-center ${isDomestic ? 'bg-blue-50 border-b-2 border-primary' : 'bg-white'}`}
+                        className="flex-1 py-3 items-center justify-center"
+                        style={isDomestic ? {
+                            backgroundColor: 'rgba(0, 102, 255, 0.05)',
+                            borderWidth: 1,
+                            borderColor: 'rgba(0, 102, 255, 0.43)',
+                            borderTopLeftRadius: 8,
+                            borderBottomLeftRadius: 8,
+                            borderTopRightRadius: 0,
+                            borderBottomRightRadius: 0,
+                        } : {
+                            backgroundColor: 'white',
+                            borderTopLeftRadius: 8,
+                            borderBottomLeftRadius: 8,
+                            borderTopRightRadius: 0,
+                            borderBottomRightRadius: 0,
+                        }}
                         onPress={() => setIsDomestic(true)}
                     >
-                        <Text className={`${isDomestic ? 'text-primary font-bold' : 'text-gray-400'}`}>내국인</Text>
+                        <Typography variant="headline2.medium" color={isDomestic ? 'primary' : 'gray'}>내국인</Typography>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        className={`flex-1 py-3 items-center ${!isDomestic ? 'bg-blue-50 border-b-2 border-primary' : 'bg-white'}`}
+                        className="flex-1 py-3 items-center justify-center"
+                        style={!isDomestic ? {
+                            backgroundColor: 'rgba(0, 102, 255, 0.05)',
+                            borderWidth: 1,
+                            borderColor: 'rgba(0, 102, 255, 0.43)',
+                            borderTopLeftRadius: 0,
+                            borderBottomLeftRadius: 0,
+                            borderTopRightRadius: 8,
+                            borderBottomRightRadius: 8,
+                        } : {
+                            backgroundColor: 'white',
+                            borderTopLeftRadius: 0,
+                            borderBottomLeftRadius: 0,
+                            borderTopRightRadius: 8,
+                            borderBottomRightRadius: 8,
+                        }}
                         onPress={() => setIsDomestic(false)}
                     >
-                        <Text className={`${!isDomestic ? 'text-primary font-bold' : 'text-gray-400'}`}>외국인</Text>
+                        <Typography variant="headline2.medium" color={!isDomestic ? 'primary' : 'gray'}>외국인</Typography>
                     </TouchableOpacity>
                 </View>
 

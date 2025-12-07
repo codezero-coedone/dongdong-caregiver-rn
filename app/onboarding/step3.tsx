@@ -4,10 +4,12 @@ import { makeRedirectUri, ResponseType, useAuthRequest } from 'expo-auth-session
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect, useState } from 'react';
-import { Platform, SafeAreaView, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import LoginFailModal from '../../components/auth/LoginFailModal';
 import Button from '../../components/ui/Button';
+import Header from '../../components/ui/Header';
 import { useAuthStore } from '../../store/authStore';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -41,9 +43,10 @@ export default function OnboardingStep3() {
         if (response?.type === 'success') {
             const { code } = response.params;
             // Here you would normally exchange code for token
+            // Here you would normally exchange code for token
             console.log('Kakao Auth Code:', code);
             login('kakao');
-            router.replace('/');
+            // Redirection to /signup/info handled by _layout because isSignupComplete is false
         } else if (response?.type === 'error') {
             setError('카카오 로그인에 실패했습니다.');
             setModalVisible(true);
@@ -61,7 +64,6 @@ export default function OnboardingStep3() {
             // signed in
             console.log('Apple Credential:', credential);
             login('apple');
-            router.replace('/');
         } catch (e: any) {
             if (e.code === 'ERR_REQUEST_CANCELED') {
                 // handle that the user canceled the sign-in flow
@@ -81,16 +83,13 @@ export default function OnboardingStep3() {
         // setError('카카오 로그인 실패 테스트'); setModalVisible(true); return;
 
         login('kakao');
-        router.replace('/');
+        // Redirection handled by _layout
     };
 
     return (
         <SafeAreaView className="flex-1 bg-white">
             <View className="flex-1 px-6 pt-10">
-                <View className="flex-row justify-between items-center mb-10">
-                    <Text className="text-lg font-bold">로그인</Text>
-                    <Text className="text-lg">A</Text>
-                </View>
+                <Header title="로그인" rightElement={<Text className="text-lg">A</Text>} />
 
                 <Text className="text-2xl font-bold text-center mb-4">
                     맞춤 돌봄 서비스 이용

@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import '../global.css'; // Import global CSS for NativeWind
@@ -14,29 +14,35 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, isSignupComplete } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
 
+  const rootNavigationState = useRootNavigationState();
+
   useEffect(() => {
+    if (!rootNavigationState?.key) return;
     const inAuthGroup = segments[0] === 'onboarding';
+    const inSignupGroup = segments[0] === 'signup';
 
     if (!isLoggedIn && !inAuthGroup) {
       // Redirect to onboarding if not logged in and not already in onboarding
-      // We use a small timeout to ensure navigation is ready, or just call it directly
-      // In Expo Router, sometimes it's better to wait for mounting
-      router.replace('/onboarding');
-    } else if (isLoggedIn && inAuthGroup) {
-      // Redirect to home if logged in and trying to access onboarding
-      router.replace('/');
+      setTimeout(() => router.replace('/onboarding'), 0);
+    } else if (isLoggedIn && !isSignupComplete && !inSignupGroup) {
+      // Redirect to signup info if logged in but signup not complete
+      setTimeout(() => router.replace('/signup/info'), 0);
+    } else if (isLoggedIn && isSignupComplete && (inAuthGroup || inSignupGroup)) {
+      // Redirect to home if logged in and signup complete, but still in auth screens
+      setTimeout(() => router.replace('/'), 0);
     }
-  }, [isLoggedIn, segments]);
+  }, [isLoggedIn, isSignupComplete, segments, rootNavigationState?.key]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+        <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         <Stack.Screen name="permission" options={{ headerShown: false }} />
       </Stack>
