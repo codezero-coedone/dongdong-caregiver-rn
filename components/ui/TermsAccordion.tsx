@@ -1,5 +1,8 @@
+import ChevronIcon from '@/assets/images/icons/bottom_chervon.svg';
+import CheckboxOff from '@/assets/images/icons/checkbox_off.svg';
+import CheckboxOn from '@/assets/images/icons/checkbox_on.svg';
 import React, { useState } from 'react';
-import { Image, LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import { LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -35,9 +38,11 @@ const TermsAccordion = ({
             <View style={styles.header}>
                 {/* Checkbox */}
                 <TouchableOpacity onPress={onCheck} style={styles.checkboxContainer}>
-                    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-                        {checked && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
+                    {checked ? (
+                        <CheckboxOn width={18} height={18} />
+                    ) : (
+                        <CheckboxOff width={18} height={18} />
+                    )}
                 </TouchableOpacity>
 
                 {/* Title */}
@@ -52,13 +57,9 @@ const TermsAccordion = ({
 
                 {/* Expand/Collapse Arrow */}
                 <TouchableOpacity onPress={toggleExpand} style={styles.arrowContainer}>
-                    <Image
-                        source={require('@/assets/images/icons/bottom_chervon.svg')}
-                        style={[
-                            styles.arrowIcon,
-                            expanded && { transform: [{ rotate: '180deg' }] }
-                        ]}
-                    />
+                    <View style={expanded && { transform: [{ rotate: '180deg' }] }}>
+                        <ChevronIcon width={20} height={20} />
+                    </View>
                 </TouchableOpacity>
             </View>
 
@@ -86,25 +87,6 @@ const styles = StyleSheet.create({
     checkboxContainer: {
         marginRight: 12,
     },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: '#D1D5DB',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'white',
-    },
-    checkboxChecked: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
-    },
-    checkmark: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
     titleContainer: {
         flex: 1,
         flexDirection: 'row',
@@ -127,14 +109,6 @@ const styles = StyleSheet.create({
     },
     arrowContainer: {
         padding: 8,
-    },
-    arrowIcon: {
-        width: 20,
-        height: 20,
-    },
-    arrow: {
-        fontSize: 18,
-        fontWeight: 'bold',
     },
     content: {
         paddingHorizontal: 36,

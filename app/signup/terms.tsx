@@ -1,3 +1,6 @@
+import ChevronIcon from '@/assets/images/icons/bottom_chervon.svg';
+import CheckboxOff from '@/assets/images/icons/checkbox_off.svg';
+import CheckboxOn from '@/assets/images/icons/checkbox_on.svg';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -70,13 +73,15 @@ export default function TermsScreen() {
                 {/* All Agree */}
                 <View style={styles.allAgreeContainer}>
                     <TouchableOpacity onPress={handleAllAgree} style={styles.allAgreeRow}>
-                        <View style={[styles.checkbox, allAgree && styles.checkboxChecked]}>
-                            {allAgree && <Text style={styles.checkmark}>✓</Text>}
-                        </View>
+                        {allAgree ? (
+                            <CheckboxOn width={18} height={18} style={styles.checkboxIcon} />
+                        ) : (
+                            <CheckboxOff width={18} height={18} style={styles.checkboxIcon} />
+                        )}
                         <Text style={styles.allAgreeText}>모두 동의하기</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleAllAgree}>
-                        <Text style={styles.expandArrow}>∨</Text>
+                        <ChevronIcon width={20} height={20} />
                     </TouchableOpacity>
                 </View>
 
@@ -158,34 +163,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: '#D1D5DB',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'white',
+    checkboxIcon: {
         marginRight: 12,
-    },
-    checkboxChecked: {
-        backgroundColor: '#3B82F6',
-        borderColor: '#3B82F6',
-    },
-    checkmark: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: 'bold',
     },
     allAgreeText: {
         fontSize: 16,
         fontWeight: '600',
         color: '#1F2937',
-    },
-    expandArrow: {
-        fontSize: 18,
-        color: '#6B7280',
     },
     buttonContainer: {
         padding: 24,
