@@ -1,16 +1,14 @@
 import { CaregiverInfo, useAuthStore } from '@/store/authStore';
-import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import AddressInput from '../../components/ui/AddressInput';
 import Button from '../../components/ui/Button';
-import DaumPostcode, { PostcodeData } from '../../components/ui/DaumPostcode';
 import FileUploadBox from '../../components/ui/FileUploadBox';
 import Input from '../../components/ui/Input';
 import MaskedRRNInput from '../../components/ui/MaskedRRNInput';
@@ -31,10 +29,10 @@ type CaregiverFormData = z.infer<typeof caregiverInfoSchema>;
 export default function CaregiverInfoScreen() {
     const router = useRouter();
     const { setCaregiverInfo, caregiverInfo } = useAuthStore();
-    const [criminalRecordFile, setCriminalRecordFile] = useState<{ uri: string; name: string } | null>(
+    const [criminalRecordFile, setCriminalRecordFile] = useState<{ uri: string; name: string; mimeType?: string } | null>(
         caregiverInfo?.criminalRecordFile || null
     );
-    const [showPostcode, setShowPostcode] = useState(false);
+
 
     // React Hook Form
     const { control, handleSubmit, formState: { errors }, setValue, watch } = useForm<CaregiverFormData>({
@@ -67,14 +65,16 @@ export default function CaregiverInfoScreen() {
     };
 
     const handleAddressSearch = () => {
-        setShowPostcode(true);
+        // Navigate to postcode search screen instead of modal
+        router.push('/signup/postcode-search');
     };
 
-    const handleAddressSelected = (data: PostcodeData) => {
-        // Use road address if available, otherwise use jibun address
-        const selectedAddress = data.roadAddress || data.jibunAddress || data.address;
-        setValue('address', selectedAddress);
-    };
+    // Sync address from store when returning from postcode search
+    React.useEffect(() => {
+        if (caregiverInfo?.address && caregiverInfo.address !== watch('address')) {
+            setValue('address', caregiverInfo.address, { shouldValidate: true, shouldDirty: true });
+        }
+    }, [caregiverInfo?.address]);
 
     const handleFileUpload = async () => {
         try {
@@ -88,6 +88,7 @@ export default function CaregiverInfoScreen() {
                 setCriminalRecordFile({
                     uri: file.uri,
                     name: file.name,
+                    mimeType: file.mimeType,
                 });
             }
         } catch (error) {
@@ -108,22 +109,12 @@ export default function CaregiverInfoScreen() {
 
         setCaregiverInfo(caregiverData);
 
-        // Navigate to the next screen
-        router.push('/signup/terms');
+        // Navigate to career screen (자격증 및 경력 등록)
+        router.push('/signup/career');
     };
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
-            {/* Header */}
-            <View className="flex-row items-center px-4 py-3 border-b border-gray-100">
-                <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
-                    <Ionicons name="chevron-back" size={24} color="#3B82F6" />
-                </TouchableOpacity>
-                <Text className="flex-1 text-center text-lg font-bold text-gray-900 -ml-8">
-                    기본 정보 입력
-                </Text>
-                <View className="w-8" />
-            </View>
 
             <ScrollView className="flex-1 px-6 pt-6">
                 {/* Warning Banner */}
@@ -249,12 +240,7 @@ export default function CaregiverInfoScreen() {
                 <Button title="다음" onPress={handleSubmit(onSubmit)} />
             </View>
 
-            {/* Daum Postcode Modal */}
-            <DaumPostcode
-                visible={showPostcode}
-                onClose={() => setShowPostcode(false)}
-                onSelected={handleAddressSelected}
-            />
+
         </SafeAreaView>
     );
 }

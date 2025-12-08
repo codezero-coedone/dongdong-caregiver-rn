@@ -1,7 +1,6 @@
 import ChevronIcon from '@/assets/images/icons/bottom_chervon.svg';
 import CheckboxOff from '@/assets/images/icons/checkbox_off.svg';
 import CheckboxOn from '@/assets/images/icons/checkbox_on.svg';
-import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -11,7 +10,6 @@ import TermsAccordion from '../../components/ui/TermsAccordion';
 
 export default function TermsScreen() {
     const router = useRouter();
-    const { completeSignup } = useAuthStore();
 
     // Checkbox states
     const [allAgree, setAllAgree] = useState(false);
@@ -55,8 +53,8 @@ export default function TermsScreen() {
     };
 
     const handleSubmit = () => {
-        completeSignup();
-        // Navigation handled by _layout based on auth state
+        // Navigate to additional info screen after terms agreement
+        router.push('/signup/caregiver-info');
     };
 
     return (

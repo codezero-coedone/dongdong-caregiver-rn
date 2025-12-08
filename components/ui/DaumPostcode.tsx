@@ -54,13 +54,28 @@ const POSTCODE_HTML = `
     <div id="container"></div>
     <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
     <script>
+        function sendToRN(data) {
+            try {
+                if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify(data));
+                } else {
+                    console.log('ReactNativeWebView not available');
+                }
+            } catch(e) {
+                console.error('postMessage error:', e);
+            }
+        }
+        
         new daum.Postcode({
             oncomplete: function(data) {
-                window.ReactNativeWebView.postMessage(JSON.stringify(data));
+                // Use setTimeout to ensure the UI is ready
+                setTimeout(function() {
+                    sendToRN(data);
+                }, 100);
             },
             onclose: function(state) {
                 if (state === 'FORCE_CLOSE') {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'close' }));
+                    sendToRN({ type: 'close' });
                 }
             },
             width: '100%',
@@ -74,6 +89,7 @@ const POSTCODE_HTML = `
 export default function DaumPostcode({ visible, onClose, onSelected }: DaumPostcodeProps) {
     const handleMessage = (event: WebViewMessageEvent) => {
         try {
+            console.log('WebView message received:', event.nativeEvent.data);
             const data = JSON.parse(event.nativeEvent.data);
 
             if (data.type === 'close') {
@@ -82,6 +98,7 @@ export default function DaumPostcode({ visible, onClose, onSelected }: DaumPostc
             }
 
             // Address selected
+            console.log('Calling onSelected with:', data);
             onSelected(data as PostcodeData);
             onClose();
         } catch (error) {
@@ -111,9 +128,24 @@ export default function DaumPostcode({ visible, onClose, onSelected }: DaumPostc
                     source={{ html: POSTCODE_HTML }}
                     onMessage={handleMessage}
                     style={styles.webview}
-                    javaScriptEnabled
-                    domStorageEnabled
+                    javaScriptEnabled={true}
+                    domStorageEnabled={true}
                     originWhitelist={['*']}
+                    mixedContentMode="always"
+                    allowFileAccess={true}
+                    allowUniversalAccessFromFileURLs={true}
+                    injectedJavaScript={`
+                        (function() {
+                            window.onerror = function(message, source, lineno, colno, error) {
+                                window.ReactNativeWebView.postMessage(JSON.stringify({type: 'error', message: message}));
+                            };
+                        })();
+                        true;
+                    `}
+                    onError={(syntheticEvent) => {
+                        const { nativeEvent } = syntheticEvent;
+                        console.error('WebView error:', nativeEvent);
+                    }}
                 />
             </SafeAreaView>
         </Modal>

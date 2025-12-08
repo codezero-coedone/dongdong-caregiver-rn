@@ -118,8 +118,10 @@ flowchart TD
 | 온보딩 2 | `app/onboarding/step2.tsx` | ✅ 완료 |
 | 소셜 로그인 | `app/onboarding/step3.tsx` | ✅ 완료 |
 | 전화번호 인증 | `app/signup/info.tsx` | ✅ 완료 |
-| 간병인 정보 입력 | `app/signup/caregiver-info.tsx` | ✅ 완료 |
 | 약관 동의 | `app/signup/terms.tsx` | ✅ 완료 |
+| 간병인 정보 입력 | `app/signup/caregiver-info.tsx` | ✅ 완료 |
+| 자격증 및 경력 등록 | `app/signup/career.tsx` | ✅ 완료 |
+| 주소 검색 | `app/signup/postcode-search.tsx` | ✅ 완료 |
 
 ---
 
@@ -130,7 +132,7 @@ flowchart TD
 | P0 | 기본 정보 입력 화면 | 0.5일 | ✅ 완료 |
 | P0 | 약관 동의 화면 | 0.5일 | ✅ 완료 |
 | P0 | JWT 토큰 관리 | 0.5일 | ✅ 완료 |
-| P1 | 주소 검색 API 연동 | 1일 | 🔜 다음 |
-| P1 | 프로필 정보 화면 (자격증/경력) | 1일 | 예정 |
+| P1 | 주소 검색 API 연동 | 1일 | ✅ 완료 |
+| P1 | 프로필 정보 화면 (자격증/경력) | 1일 | ✅ 완료 |
 | P2 | 파일 업로드 서버 연동 | 1일 | 예정 |
 | P2 | 이메일 로그인 (심사용) | 0.5일 | 예정 |

@@ -25,18 +25,18 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignupInfoScreen() {
     const router = useRouter();
-    const { setSignupInfo } = useAuthStore();
-    const [isDomestic, setIsDomestic] = useState(true);
+    const { setSignupInfo, signupInfo } = useAuthStore();
+    const [isDomestic, setIsDomestic] = useState(signupInfo?.isDomestic ?? true);
 
     // React Hook Form
     const { control, handleSubmit, formState: { errors }, trigger, watch } = useForm<SignupFormData>({
         resolver: zodResolver(signupSchema),
         mode: 'onBlur',
         defaultValues: {
-            name: '',
-            rrnFront: '',
-            rrnBack: '',
-            phone: '',
+            name: signupInfo?.name || '',
+            rrnFront: signupInfo?.rrnFront || '',
+            rrnBack: signupInfo?.rrnBack || '',
+            phone: signupInfo?.phone || '',
         }
     });
 

@@ -24,6 +24,26 @@ export default function SignupLayout() {
                     title: '권한 동의',
                 }}
             />
+            <Stack.Screen
+                name="caregiver-info"
+                options={{
+                    title: '기본 정보 입력',
+                }}
+            />
+            <Stack.Screen
+                name="postcode-search"
+                options={{
+                    title: '주소 검색',
+                    presentation: 'modal',
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="career"
+                options={{
+                    title: '자격증 및 경력 등록',
+                }}
+            />
         </Stack>
     );
 }
