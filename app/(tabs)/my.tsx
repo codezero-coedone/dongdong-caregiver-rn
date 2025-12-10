@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -61,6 +62,7 @@ const MOCK_REVIEWS = [
 const TABS = ['MY홈', '간병일지', '수익'];
 
 export default function MyScreen() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState('MY홈');
 
     const renderStars = (rating: number) => {
@@ -124,7 +126,7 @@ export default function MyScreen() {
                                 </View>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.editButton}>
+                        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/edit')}>
                             <Text style={styles.editButtonText}>프로필 수정</Text>
                             <Ionicons name="pencil" size={14} color="#6B7280" />
                         </TouchableOpacity>
@@ -146,7 +148,7 @@ export default function MyScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>진행 중인 간병</Text>
-                        <TouchableOpacity style={styles.moreLink}>
+                        <TouchableOpacity style={styles.moreLink} onPress={() => router.push('/care-history')}>
                             <Text style={styles.moreLinkText}>이전 내역</Text>
                             <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
                         </TouchableOpacity>
@@ -194,7 +196,7 @@ export default function MyScreen() {
                                 <TouchableOpacity style={styles.writeJournalButton}>
                                     <Text style={styles.writeJournalButtonText}>일지 작성하기</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.viewDetailButton}>
+                                <TouchableOpacity style={styles.viewDetailButton} onPress={() => router.push('/care-history/detail')}>
                                     <Text style={styles.viewDetailButtonText}>상세보기</Text>
                                 </TouchableOpacity>
                             </View>
@@ -215,7 +217,7 @@ export default function MyScreen() {
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>나의 소개</Text>
                         {MOCK_INTRODUCTION && (
-                            <TouchableOpacity style={styles.editLink} onPress={() => { /* TODO: 편집 화면으로 이동 */ }}>
+                            <TouchableOpacity style={styles.editLink} onPress={() => router.push('/profile/introduction')}>
                                 <Text style={styles.editLinkText}>편집</Text>
                                 <Ionicons name="pencil" size={14} color="#EF4444" />
                             </TouchableOpacity>
@@ -257,7 +259,7 @@ export default function MyScreen() {
                             </View>
                         </View>
                     ) : (
-                        <TouchableOpacity style={styles.actionCard} onPress={() => { /* TODO: 등록 화면으로 이동 */ }}>
+                        <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/profile/introduction')}>
                             <View style={styles.actionCardContent}>
                                 <Text style={styles.actionCardTitle}>나의 소개 등록하기</Text>
                                 <Text style={styles.actionCardDesc}>소개를 등록하면{'\n'}지원 수락 확률이 올라가요.</Text>
