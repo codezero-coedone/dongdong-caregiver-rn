@@ -9,28 +9,63 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 import ExistingMemberModal from '../../components/auth/ExistingMemberModal';
 import Button from '../../components/ui/Button';
+import DateInput from '../../components/ui/DateInput';
 import Input from '../../components/ui/Input';
 import MaskedRRNInput from '../../components/ui/MaskedRRNInput';
+import SelectInput from '../../components/ui/SelectInput';
 import Typography from '../../components/ui/Typography';
 
-// Zod Schema
-const signupSchema = z.object({
+// 비자 종류 옵션
+const VISA_TYPES = [
+    { label: 'E-9 (비전문취업)', value: 'E-9' },
+    { label: 'H-2 (방문취업)', value: 'H-2' },
+    { label: 'F-4 (재외동포)', value: 'F-4' },
+    { label: 'F-5 (영주)', value: 'F-5' },
+    { label: 'F-6 (결혼이민)', value: 'F-6' },
+    { label: 'D-2 (유학)', value: 'D-2' },
+    { label: 'D-6 (종교)', value: 'D-6' },
+    { label: 'E-7 (특정활동)', value: 'E-7' },
+    { label: '기타', value: 'OTHER' },
+];
+
+// 가입 불가 비자 타입
+const DISALLOWED_VISA_TYPES = ['D-6'];
+
+// 내국인용 Zod Schema
+const domesticSchema = z.object({
     name: z.string().min(1, '이름을 입력해주세요.'),
     rrnFront: z.string().length(6, '주민등록번호 앞자리 6자리를 입력해주세요.'),
     rrnBack: z.string().length(7, '주민등록번호 뒷자리 7자리를 입력해주세요.'),
     phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
 });
 
-type SignupFormData = z.infer<typeof signupSchema>;
+// 외국인용 Zod Schema
+const foreignerSchema = z.object({
+    koreanName: z.string().min(1, '한글 이름을 입력해주세요.'),
+    englishName: z.string().min(1, '영문 이름을 입력해주세요.'),
+    foreignRegFront: z.string().length(6, '외국인등록번호 앞자리 6자리를 입력해주세요.'),
+    foreignRegBack: z.string().length(7, '외국인등록번호 뒷자리 7자리를 입력해주세요.'),
+    visaType: z.string()
+        .min(1, '비자 종류를 선택해주세요.')
+        .refine(
+            (val) => !DISALLOWED_VISA_TYPES.includes(val),
+            { message: '가입할 수 없는 비자입니다.' }
+        ),
+    visaExpiryDate: z.string().min(1, '비자 만료일을 선택해주세요.'),
+    phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
+});
+
+type DomesticFormData = z.infer<typeof domesticSchema>;
+type ForeignerFormData = z.infer<typeof foreignerSchema>;
 
 export default function SignupInfoScreen() {
     const router = useRouter();
     const { setSignupInfo, signupInfo } = useAuthStore();
     const [isDomestic, setIsDomestic] = useState(signupInfo?.isDomestic ?? true);
 
-    // React Hook Form
-    const { control, handleSubmit, formState: { errors }, trigger, watch } = useForm<SignupFormData>({
-        resolver: zodResolver(signupSchema),
+    // 내국인용 React Hook Form
+    const domesticForm = useForm<DomesticFormData>({
+        resolver: zodResolver(domesticSchema),
         mode: 'onBlur',
         defaultValues: {
             name: signupInfo?.name || '',
@@ -40,9 +75,30 @@ export default function SignupInfoScreen() {
         }
     });
 
-    const name = watch('name');
-    const phone = watch('phone');
+    // 외국인용 React Hook Form
+    const foreignerForm = useForm<ForeignerFormData>({
+        resolver: zodResolver(foreignerSchema),
+        mode: 'onBlur',
+        defaultValues: {
+            koreanName: signupInfo?.koreanName || '',
+            englishName: signupInfo?.englishName || '',
+            foreignRegFront: signupInfo?.foreignRegFront || '',
+            foreignRegBack: signupInfo?.foreignRegBack || '',
+            visaType: signupInfo?.visaType || '',
+            visaExpiryDate: signupInfo?.visaExpiryDate || '',
+            phone: signupInfo?.phone || '',
+        }
+    });
+
+    // Watch phone from both forms
+    const domesticPhone = domesticForm.watch('phone');
+    const foreignerPhone = foreignerForm.watch('phone');
+    const phone = isDomestic ? domesticPhone : foreignerPhone;
+
     const [verificationCode, setVerificationCode] = useState('');
+    const [visaExpiryDateValue, setVisaExpiryDateValue] = useState<Date | null>(
+        signupInfo?.visaExpiryDate ? new Date(signupInfo.visaExpiryDate) : null
+    );
 
     // Phone number formatting helper
     const formatPhoneNumber = (value: string) => {
@@ -63,8 +119,16 @@ export default function SignupInfoScreen() {
     const [timer, setTimer] = useState(0);
     const [modalVisible, setModalVisible] = useState(false);
 
+    // Reset verification state when switching between domestic/foreigner
     useEffect(() => {
-        let interval: any;
+        setIsVerificationSent(false);
+        setIsVerified(false);
+        setVerificationCode('');
+        setTimer(0);
+    }, [isDomestic]);
+
+    useEffect(() => {
+        let interval: ReturnType<typeof setInterval>;
         if (timer > 0) {
             interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
@@ -81,6 +145,7 @@ export default function SignupInfoScreen() {
 
     const handleRequestVerification = async () => {
         // Trigger phone validation first
+        const trigger = isDomestic ? domesticForm.trigger : foreignerForm.trigger;
         const isPhoneValid = await trigger('phone');
         if (!isPhoneValid) return;
 
@@ -121,22 +186,50 @@ export default function SignupInfoScreen() {
         }
     };
 
-    const onSubmit = (data: SignupFormData) => {
+    const onDomesticSubmit = (data: DomesticFormData) => {
         if (!isVerified) {
             Alert.alert('알림', '휴대폰 인증을 완료해주세요.');
             return;
         }
-        // Save validated data to store
         setSignupInfo({
             name: data.name,
             rrnFront: data.rrnFront,
             rrnBack: data.rrnBack,
             phone: data.phone,
-            isDomestic,
+            isDomestic: true,
         });
-        // Navigate to terms screen
         router.replace('/signup/terms');
     };
+
+    const onForeignerSubmit = (data: ForeignerFormData) => {
+        if (!isVerified) {
+            Alert.alert('알림', '휴대폰 인증을 완료해주세요.');
+            return;
+        }
+        setSignupInfo({
+            koreanName: data.koreanName,
+            englishName: data.englishName,
+            foreignRegFront: data.foreignRegFront,
+            foreignRegBack: data.foreignRegBack,
+            visaType: data.visaType,
+            visaExpiryDate: data.visaExpiryDate,
+            phone: data.phone,
+            isDomestic: false,
+        });
+        router.replace('/signup/terms');
+    };
+
+    const handleDateChange = (date: Date | null) => {
+        setVisaExpiryDateValue(date);
+        if (date) {
+            const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            foreignerForm.setValue('visaExpiryDate', formattedDate, { shouldValidate: true });
+        } else {
+            foreignerForm.setValue('visaExpiryDate', '', { shouldValidate: true });
+        }
+    };
+
+    const currentErrors = isDomestic ? domesticForm.formState.errors : foreignerForm.formState.errors;
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
@@ -165,6 +258,7 @@ export default function SignupInfoScreen() {
                     >
                         <Typography variant="headline2.medium" color={isDomestic ? 'primary' : 'gray'}>내국인</Typography>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                         className="flex-1 py-3 items-center justify-center"
                         style={!isDomestic ? {
@@ -188,89 +282,230 @@ export default function SignupInfoScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Form */}
-                <View className="mb-4">
-                    <Text className="text-sm font-bold mb-2 text-gray-800">
-                        이름 <Text style={{ color: '#EF4444' }}>*</Text>
-                    </Text>
-                    <Controller
-                        control={control}
-                        name="name"
-                        render={({ field: { onChange, onBlur, value } }) => (
-                            <Input
-                                containerClassName="mb-0"
-                                placeholder="홍길동"
-                                value={value}
-                                onChangeText={onChange}
-                                onBlur={onBlur}
-                                error={errors.name?.message}
-                                isValid={value.length > 0 && !errors.name}
-                            />
-                        )}
-                    />
-                </View>
-
-                <View className="mb-4">
-                    <Text className="text-sm font-bold mb-2 text-gray-800">
-                        주민등록번호 <Text style={{ color: '#EF4444' }}>*</Text>
-                    </Text>
-                    <View className="flex-row items-center">
-                        <Controller
-                            control={control}
-                            name="rrnFront"
-                            render={({ field: { onChange, onBlur, value } }) => (
-                                <Input
-                                    containerClassName="flex-1 mb-0"
-                                    placeholder="801232"
-                                    keyboardType="number-pad"
-                                    maxLength={6}
-                                    value={value}
-                                    onChangeText={onChange}
-                                    onBlur={onBlur}
-                                    error={errors.rrnFront?.message}
-                                />
-                            )}
-                        />
-                        <Text className="mx-2 text-gray-400">-</Text>
-                        <View className="flex-1">
+                {/* 내국인 Form */}
+                {isDomestic ? (
+                    <>
+                        <View className="mb-4">
+                            <Text className="text-sm font-bold mb-2 text-gray-800">
+                                이름 <Text style={{ color: '#EF4444' }}>*</Text>
+                            </Text>
                             <Controller
-                                control={control}
-                                name="rrnBack"
-                                render={({ field: { onChange, value } }) => (
-                                    <MaskedRRNInput
+                                control={domesticForm.control}
+                                name="name"
+                                render={({ field: { onChange, onBlur, value } }) => (
+                                    <Input
+                                        containerClassName="mb-0"
+                                        placeholder="홍길동"
                                         value={value}
                                         onChangeText={onChange}
+                                        onBlur={onBlur}
+                                        error={domesticForm.formState.errors.name?.message}
+                                        isValid={value.length > 0 && !domesticForm.formState.errors.name}
                                     />
                                 )}
                             />
                         </View>
-                    </View>
-                </View>
 
-                <View className="mb-4">
-                    <Text className="text-sm font-bold mb-2 text-gray-800">
-                        휴대폰 <Text style={{ color: '#EF4444' }}>*</Text>
-                    </Text>
-                    <Controller
-                        control={control}
-                        name="phone"
-                        render={({ field: { onChange, onBlur, value } }) => (
-                            <Input
-                                containerClassName="mb-0"
-                                placeholder="010-1234-5678"
-                                keyboardType="phone-pad"
-                                value={formatPhoneNumber(value)}
-                                onChangeText={handlePhoneChange(onChange)}
-                                onBlur={onBlur}
-                                editable={!isVerified}
-                                error={errors.phone?.message}
-                                isValid={value.length >= 10 && !errors.phone}
+                        <View className="mb-4">
+                            <Text className="text-sm font-bold mb-2 text-gray-800">
+                                주민등록번호 <Text style={{ color: '#EF4444' }}>*</Text>
+                            </Text>
+                            <View className="flex-row items-center">
+                                <Controller
+                                    control={domesticForm.control}
+                                    name="rrnFront"
+                                    render={({ field: { onChange, onBlur, value } }) => (
+                                        <Input
+                                            containerClassName="flex-1 mb-0"
+                                            placeholder="801232"
+                                            keyboardType="number-pad"
+                                            maxLength={6}
+                                            value={value}
+                                            onChangeText={onChange}
+                                            onBlur={onBlur}
+                                            error={domesticForm.formState.errors.rrnFront?.message}
+                                        />
+                                    )}
+                                />
+                                <Text className="mx-2 text-gray-400">-</Text>
+                                <View className="flex-1">
+                                    <Controller
+                                        control={domesticForm.control}
+                                        name="rrnBack"
+                                        render={({ field: { onChange, value } }) => (
+                                            <MaskedRRNInput
+                                                value={value}
+                                                onChangeText={onChange}
+                                            />
+                                        )}
+                                    />
+                                </View>
+                            </View>
+                        </View>
+
+                        <View className="mb-4">
+                            <Text className="text-sm font-bold mb-2 text-gray-800">
+                                휴대폰 <Text style={{ color: '#EF4444' }}>*</Text>
+                            </Text>
+                            <Controller
+                                control={domesticForm.control}
+                                name="phone"
+                                render={({ field: { onChange, onBlur, value } }) => (
+                                    <Input
+                                        containerClassName="mb-0"
+                                        placeholder="010-1234-5678"
+                                        keyboardType="phone-pad"
+                                        value={formatPhoneNumber(value)}
+                                        onChangeText={handlePhoneChange(onChange)}
+                                        onBlur={onBlur}
+                                        editable={!isVerified}
+                                        error={domesticForm.formState.errors.phone?.message}
+                                        isValid={value.length >= 10 && !domesticForm.formState.errors.phone}
+                                    />
+                                )}
                             />
-                        )}
-                    />
-                </View>
+                        </View>
+                    </>
+                ) : (
+                    /* 외국인 Form */
+                    <>
+                        <View className="mb-4">
+                            <Text className="text-sm font-bold mb-2 text-gray-800">
+                                한글 이름 <Text style={{ color: '#EF4444' }}>*</Text>
+                            </Text>
+                            <Controller
+                                control={foreignerForm.control}
+                                name="koreanName"
+                                render={({ field: { onChange, onBlur, value } }) => (
+                                    <Input
+                                        containerClassName="mb-0"
+                                        placeholder="홍길동"
+                                        value={value}
+                                        onChangeText={onChange}
+                                        onBlur={onBlur}
+                                        error={foreignerForm.formState.errors.koreanName?.message}
+                                        isValid={value.length > 0 && !foreignerForm.formState.errors.koreanName}
+                                    />
+                                )}
+                            />
+                        </View>
 
-                {isVerificationSent && !isVerified && (
+                        <View className="mb-4">
+                            <Text className="text-sm font-bold mb-2 text-gray-800">
+                                영문 이름 <Text style={{ color: '#EF4444' }}>*</Text>
+                            </Text>
+                            <Controller
+                                control={foreignerForm.control}
+                                name="englishName"
+                                render={({ field: { onChange, onBlur, value } }) => (
+                                    <Input
+                                        containerClassName="mb-0"
+                                        placeholder="Hong Gildong"
+                                        value={value}
+                                        onChangeText={onChange}
+                                        onBlur={onBlur}
+                                        error={foreignerForm.formState.errors.englishName?.message}
+                                        isValid={value.length > 0 && !foreignerForm.formState.errors.englishName}
+                                    />
+                                )}
+                            />
+                        </View>
+
+                        <View className="mb-4">
+                            <Text className="text-sm font-bold mb-2 text-gray-800">
+                                외국인등록번호 <Text style={{ color: '#EF4444' }}>*</Text>
+                            </Text>
+                            <View className="flex-row items-center">
+                                <Controller
+                                    control={foreignerForm.control}
+                                    name="foreignRegFront"
+                                    render={({ field: { onChange, onBlur, value } }) => (
+                                        <Input
+                                            containerClassName="flex-1 mb-0"
+                                            placeholder="801232"
+                                            keyboardType="number-pad"
+                                            maxLength={6}
+                                            value={value}
+                                            onChangeText={onChange}
+                                            onBlur={onBlur}
+                                            error={foreignerForm.formState.errors.foreignRegFront?.message}
+                                            isValid={value.length === 6 && !foreignerForm.formState.errors.foreignRegFront}
+                                        />
+                                    )}
+                                />
+                                <Text className="mx-2 text-gray-400">-</Text>
+                                <View className="flex-1">
+                                    <Controller
+                                        control={foreignerForm.control}
+                                        name="foreignRegBack"
+                                        render={({ field: { onChange, value } }) => (
+                                            <MaskedRRNInput
+                                                value={value}
+                                                onChangeText={onChange}
+                                            />
+                                        )}
+                                    />
+                                </View>
+                            </View>
+                        </View>
+
+                        <Controller
+                            control={foreignerForm.control}
+                            name="visaType"
+                            render={({ field: { onChange, value } }) => (
+                                <SelectInput
+                                    label="비자 종류"
+                                    placeholder="선택해주세요."
+                                    value={value}
+                                    options={VISA_TYPES}
+                                    onSelect={(val) => {
+                                        onChange(val);
+                                        // 선택 시 즉시 유효성 검사 트리거
+                                        foreignerForm.trigger('visaType');
+                                    }}
+                                    error={foreignerForm.formState.errors.visaType?.message}
+                                    isValid={!!value && !foreignerForm.formState.errors.visaType}
+                                />
+                            )}
+                        />
+
+                        <DateInput
+                            label="비자 만료일"
+                            placeholder="yyyy-mm-dd"
+                            value={visaExpiryDateValue}
+                            onChange={handleDateChange}
+                            error={foreignerForm.formState.errors.visaExpiryDate?.message}
+                            isValid={!!visaExpiryDateValue && !foreignerForm.formState.errors.visaExpiryDate}
+                            minimumDate={new Date()}
+                        />
+
+                        <View className="mb-4">
+                            <Text className="text-sm font-bold mb-2 text-gray-800">
+                                휴대폰 <Text style={{ color: '#EF4444' }}>*</Text>
+                            </Text>
+                            <Controller
+                                control={foreignerForm.control}
+                                name="phone"
+                                render={({ field: { onChange, onBlur, value } }) => (
+                                    <Input
+                                        containerClassName="mb-0"
+                                        placeholder="010-1234-6789"
+                                        keyboardType="phone-pad"
+                                        value={formatPhoneNumber(value)}
+                                        onChangeText={handlePhoneChange(onChange)}
+                                        onBlur={onBlur}
+                                        editable={!isVerified}
+                                        error={foreignerForm.formState.errors.phone?.message}
+                                        isValid={value.length >= 10 && !foreignerForm.formState.errors.phone}
+                                    />
+                                )}
+                            />
+                        </View>
+                    </>
+                )}
+
+                {/* 인증번호 입력 */}
+                {isVerificationSent && (
                     <View className="mb-4">
                         <Text className="text-sm font-bold mb-2 text-gray-800">
                             인증번호를 입력해주세요
@@ -283,8 +518,10 @@ export default function SignupInfoScreen() {
                                 maxLength={4}
                                 value={verificationCode}
                                 onChangeText={setVerificationCode}
+                                editable={!isVerified}
+                                isValid={isVerified}
                             />
-                            {timer > 0 && (
+                            {timer > 0 && !isVerified && (
                                 <View
                                     style={{
                                         position: 'absolute',
@@ -307,11 +544,21 @@ export default function SignupInfoScreen() {
 
             <View className="p-6 border-t border-gray-100">
                 {!isVerificationSent ? (
-                    <Button title="인증번호 받기" onPress={handleRequestVerification} disabled={phone.length < 10 || !!errors.phone} />
+                    <Button
+                        title="인증번호 받기"
+                        onPress={handleRequestVerification}
+                        disabled={phone.length < 10 || !!currentErrors.phone}
+                    />
                 ) : !isVerified ? (
                     <Button title="인증 완료" onPress={handleVerifyCode} disabled={verificationCode.length !== 4} />
                 ) : (
-                    <Button title="다음" onPress={handleSubmit(onSubmit)} />
+                    <Button
+                        title="다음"
+                        onPress={isDomestic
+                            ? domesticForm.handleSubmit(onDomesticSubmit)
+                            : foreignerForm.handleSubmit(onForeignerSubmit)
+                        }
+                    />
                 )}
             </View>
 

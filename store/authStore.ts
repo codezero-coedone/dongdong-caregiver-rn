@@ -5,11 +5,19 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 type LoginType = 'kakao' | 'apple' | null;
 
 interface SignupInfo {
-    name: string;
-    rrnFront: string;
-    rrnBack: string;
     phone: string;
     isDomestic: boolean;
+    // 내국인 전용 필드
+    name?: string;
+    rrnFront?: string;
+    rrnBack?: string;
+    // 외국인 전용 필드
+    koreanName?: string;
+    englishName?: string;
+    foreignRegFront?: string;
+    foreignRegBack?: string;
+    visaType?: string;
+    visaExpiryDate?: string;
 }
 
 interface CaregiverInfo {

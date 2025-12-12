@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import JournalCard from '../../components/caregiving-journal/JournalCard';
+import { useJournalStore } from '../../store/journalStore';
 
 // Mock 사용자 데이터
 const MOCK_USER = {
@@ -65,6 +67,40 @@ export default function MyScreen() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('MY홈');
 
+    // Journal store
+    const {
+        currentPatient,
+        selectedDate,
+        setSelectedDate,
+        entries,
+    } = useJournalStore();
+
+    // Get current journal entry
+    const currentEntry = entries.find(
+        (e) => e.date === selectedDate && e.patientId === currentPatient?.id
+    );
+
+    // Special notes state
+    const [specialNotes, setSpecialNotes] = useState(currentEntry?.specialNotes || '');
+
+    // Date navigation
+    const navigateDate = (direction: 'prev' | 'next') => {
+        const currentDate = new Date(selectedDate);
+        if (direction === 'prev') {
+            currentDate.setDate(currentDate.getDate() - 1);
+        } else {
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        const newDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+        setSelectedDate(newDate);
+    };
+
+    // Format date for display
+    const formatDisplayDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+    };
+
     const renderStars = (rating: number) => {
         return Array(5).fill(0).map((_, index) => (
             <Ionicons
@@ -105,199 +141,298 @@ export default function MyScreen() {
                 ))}
             </View>
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Profile Card */}
-                <View style={styles.profileCard}>
-                    <View style={styles.profileHeader}>
-                        <View style={styles.profileLeft}>
-                            <View style={styles.avatar}>
-                                <Ionicons name="person" size={28} color="#9CA3AF" />
+            {/* MY홈 Tab Content */}
+            {activeTab === 'MY홈' && (
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    {/* Profile Card */}
+                    <View style={styles.profileCard}>
+                        <View style={styles.profileHeader}>
+                            <View style={styles.profileLeft}>
+                                <View style={styles.avatar}>
+                                    <Ionicons name="person" size={28} color="#9CA3AF" />
+                                </View>
+                                <View style={styles.profileInfo}>
+                                    <View style={styles.nameRow}>
+                                        <Text style={styles.name}>{MOCK_USER.name}</Text>
+                                        {MOCK_USER.isVerified && (
+                                            <Ionicons name="checkmark-circle" size={16} color="#3B82F6" />
+                                        )}
+                                    </View>
+                                    <View style={styles.ratingRow}>
+                                        <Text style={styles.ratingLabel}>평점</Text>
+                                        <Text style={styles.ratingValue}>{MOCK_USER.rating}</Text>
+                                    </View>
+                                </View>
                             </View>
-                            <View style={styles.profileInfo}>
-                                <View style={styles.nameRow}>
-                                    <Text style={styles.name}>{MOCK_USER.name}</Text>
-                                    {MOCK_USER.isVerified && (
-                                        <Ionicons name="checkmark-circle" size={16} color="#3B82F6" />
-                                    )}
-                                </View>
-                                <View style={styles.ratingRow}>
-                                    <Text style={styles.ratingLabel}>평점</Text>
-                                    <Text style={styles.ratingValue}>{MOCK_USER.rating}</Text>
-                                </View>
+                            <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/edit')}>
+                                <Text style={styles.editButtonText}>프로필 수정</Text>
+                                <Ionicons name="pencil" size={14} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.profileDetails}>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>근무 경력</Text>
+                                <Text style={styles.detailValue}>{MOCK_USER.experience}</Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>보유 자격증</Text>
+                                <Text style={styles.detailValue}>{MOCK_USER.certificates}</Text>
                             </View>
                         </View>
-                        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/profile/edit')}>
-                            <Text style={styles.editButtonText}>프로필 수정</Text>
-                            <Ionicons name="pencil" size={14} color="#6B7280" />
-                        </TouchableOpacity>
                     </View>
 
-                    <View style={styles.profileDetails}>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>근무 경력</Text>
-                            <Text style={styles.detailValue}>{MOCK_USER.experience}</Text>
+                    {/* 진행 중인 간병 */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>진행 중인 간병</Text>
+                            <TouchableOpacity style={styles.moreLink} onPress={() => router.push('/care-history')}>
+                                <Text style={styles.moreLinkText}>이전 내역</Text>
+                                <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
+                            </TouchableOpacity>
                         </View>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>보유 자격증</Text>
-                            <Text style={styles.detailValue}>{MOCK_USER.certificates}</Text>
-                        </View>
-                    </View>
-                </View>
 
-                {/* 진행 중인 간병 */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>진행 중인 간병</Text>
-                        <TouchableOpacity style={styles.moreLink} onPress={() => router.push('/care-history')}>
-                            <Text style={styles.moreLinkText}>이전 내역</Text>
-                            <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
-                        </TouchableOpacity>
-                    </View>
+                        {MOCK_ONGOING_CARE ? (
+                            <View style={styles.ongoingCareCard}>
+                                {/* 남은 일수 */}
+                                <Text style={styles.daysRemaining}>{MOCK_ONGOING_CARE.daysRemaining}일 남음</Text>
 
-                    {MOCK_ONGOING_CARE ? (
-                        <View style={styles.ongoingCareCard}>
-                            {/* 남은 일수 */}
-                            <Text style={styles.daysRemaining}>{MOCK_ONGOING_CARE.daysRemaining}일 남음</Text>
+                                {/* 환자 정보 */}
+                                <Text style={styles.ongoingPatientName}>
+                                    {MOCK_ONGOING_CARE.patient.name} ({MOCK_ONGOING_CARE.patient.age}세, {MOCK_ONGOING_CARE.patient.gender})
+                                </Text>
 
-                            {/* 환자 정보 */}
-                            <Text style={styles.ongoingPatientName}>
-                                {MOCK_ONGOING_CARE.patient.name} ({MOCK_ONGOING_CARE.patient.age}세, {MOCK_ONGOING_CARE.patient.gender})
-                            </Text>
-
-                            {/* 태그 */}
-                            <View style={styles.ongoingTags}>
-                                {MOCK_ONGOING_CARE.tags.map((tag, index) => (
-                                    <View key={index} style={styles.ongoingTag}>
-                                        <Text style={styles.ongoingTagText}>{tag}</Text>
-                                    </View>
-                                ))}
-                            </View>
-
-                            {/* 상세 정보 */}
-                            <View style={styles.ongoingDetails}>
-                                <View style={styles.ongoingDetailRow}>
-                                    <View style={styles.ongoingDetailIcon}>
-                                        <Ionicons name="calendar-outline" size={14} color="#6B7280" />
-                                    </View>
-                                    <Text style={styles.ongoingDetailLabel}>기간</Text>
-                                    <Text style={styles.ongoingDetailValue}>{MOCK_ONGOING_CARE.period}</Text>
+                                {/* 태그 */}
+                                <View style={styles.ongoingTags}>
+                                    {MOCK_ONGOING_CARE.tags.map((tag, index) => (
+                                        <View key={index} style={styles.ongoingTag}>
+                                            <Text style={styles.ongoingTagText}>{tag}</Text>
+                                        </View>
+                                    ))}
                                 </View>
-                                <View style={styles.ongoingDetailRow}>
-                                    <View style={styles.ongoingDetailIcon}>
-                                        <Ionicons name="medical-outline" size={14} color="#6B7280" />
+
+                                {/* 상세 정보 */}
+                                <View style={styles.ongoingDetails}>
+                                    <View style={styles.ongoingDetailRow}>
+                                        <View style={styles.ongoingDetailIcon}>
+                                            <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+                                        </View>
+                                        <Text style={styles.ongoingDetailLabel}>기간</Text>
+                                        <Text style={styles.ongoingDetailValue}>{MOCK_ONGOING_CARE.period}</Text>
                                     </View>
-                                    <Text style={styles.ongoingDetailLabel}>병명</Text>
-                                    <Text style={styles.ongoingDetailValue}>{MOCK_ONGOING_CARE.diagnosis}</Text>
+                                    <View style={styles.ongoingDetailRow}>
+                                        <View style={styles.ongoingDetailIcon}>
+                                            <Ionicons name="medical-outline" size={14} color="#6B7280" />
+                                        </View>
+                                        <Text style={styles.ongoingDetailLabel}>병명</Text>
+                                        <Text style={styles.ongoingDetailValue}>{MOCK_ONGOING_CARE.diagnosis}</Text>
+                                    </View>
+                                </View>
+
+                                {/* 버튼 */}
+                                <View style={styles.ongoingButtons}>
+                                    <TouchableOpacity style={styles.writeJournalButton} onPress={() => setActiveTab('간병일지')}>
+                                        <Text style={styles.writeJournalButtonText}>일지 작성하기</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.viewDetailButton} onPress={() => router.push('/care-history/detail')}>
+                                        <Text style={styles.viewDetailButtonText}>상세보기</Text>
+                                    </TouchableOpacity>
                                 </View>
                             </View>
-
-                            {/* 버튼 */}
-                            <View style={styles.ongoingButtons}>
-                                <TouchableOpacity style={styles.writeJournalButton}>
-                                    <Text style={styles.writeJournalButtonText}>일지 작성하기</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.viewDetailButton} onPress={() => router.push('/care-history/detail')}>
-                                    <Text style={styles.viewDetailButtonText}>상세보기</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    ) : (
-                        <TouchableOpacity style={styles.actionCard}>
-                            <View style={styles.actionCardContent}>
-                                <Text style={styles.actionCardTitle}>간병 지원하기</Text>
-                                <Text style={styles.actionCardDesc}>홈에서 요청 중인 매칭에{'\n'}지원할 수 있어요/</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                {/* 나의 소개 */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>나의 소개</Text>
-                        {MOCK_INTRODUCTION && (
-                            <TouchableOpacity style={styles.editLink} onPress={() => router.push('/profile/introduction')}>
-                                <Text style={styles.editLinkText}>편집</Text>
-                                <Ionicons name="pencil" size={14} color="#EF4444" />
+                        ) : (
+                            <TouchableOpacity style={styles.actionCard}>
+                                <View style={styles.actionCardContent}>
+                                    <Text style={styles.actionCardTitle}>간병 지원하기</Text>
+                                    <Text style={styles.actionCardDesc}>홈에서 요청 중인 매칭에{'\n'}지원할 수 있어요/</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
                             </TouchableOpacity>
                         )}
                     </View>
 
-                    {MOCK_INTRODUCTION ? (
-                        <View style={styles.introductionCard}>
-                            {/* 자기소개 */}
-                            <View style={styles.introSection}>
-                                <Text style={styles.introLabel}>자기소개</Text>
-                                <View style={styles.introTextBox}>
-                                    <Text style={styles.introText}>{MOCK_INTRODUCTION.selfIntro}</Text>
-                                </View>
-                            </View>
-
-                            {/* 나만의 강점 */}
-                            <View style={styles.introSection}>
-                                <Text style={styles.introLabel}>나만의 강점</Text>
-                                <View style={styles.chipContainer}>
-                                    {MOCK_INTRODUCTION.strengths.map((strength, index) => (
-                                        <View key={index} style={styles.chip}>
-                                            <Text style={styles.chipText}>{strength}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-
-                            {/* 자신 있는 돌봄 */}
-                            <View style={styles.introSection}>
-                                <Text style={styles.introLabel}>자신 있는 돌봄</Text>
-                                <View style={styles.chipContainer}>
-                                    {MOCK_INTRODUCTION.specialties.map((specialty, index) => (
-                                        <View key={index} style={styles.chip}>
-                                            <Text style={styles.chipText}>{specialty}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
+                    {/* 나의 소개 */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>나의 소개</Text>
+                            {MOCK_INTRODUCTION && (
+                                <TouchableOpacity style={styles.editLink} onPress={() => router.push('/profile/introduction')}>
+                                    <Text style={styles.editLinkText}>편집</Text>
+                                    <Ionicons name="pencil" size={14} color="#EF4444" />
+                                </TouchableOpacity>
+                            )}
                         </View>
-                    ) : (
-                        <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/profile/introduction')}>
-                            <View style={styles.actionCardContent}>
-                                <Text style={styles.actionCardTitle}>나의 소개 등록하기</Text>
-                                <Text style={styles.actionCardDesc}>소개를 등록하면{'\n'}지원 수락 확률이 올라가요.</Text>
+
+                        {MOCK_INTRODUCTION ? (
+                            <View style={styles.introductionCard}>
+                                {/* 자기소개 */}
+                                <View style={styles.introSection}>
+                                    <Text style={styles.introLabel}>자기소개</Text>
+                                    <View style={styles.introTextBox}>
+                                        <Text style={styles.introText}>{MOCK_INTRODUCTION.selfIntro}</Text>
+                                    </View>
+                                </View>
+
+                                {/* 나만의 강점 */}
+                                <View style={styles.introSection}>
+                                    <Text style={styles.introLabel}>나만의 강점</Text>
+                                    <View style={styles.chipContainer}>
+                                        {MOCK_INTRODUCTION.strengths.map((strength, index) => (
+                                            <View key={index} style={styles.chip}>
+                                                <Text style={styles.chipText}>{strength}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                {/* 자신 있는 돌봄 */}
+                                <View style={styles.introSection}>
+                                    <Text style={styles.introLabel}>자신 있는 돌봄</Text>
+                                    <View style={styles.chipContainer}>
+                                        {MOCK_INTRODUCTION.specialties.map((specialty, index) => (
+                                            <View key={index} style={styles.chip}>
+                                                <Text style={styles.chipText}>{specialty}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </View>
                             </View>
-                            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                        ) : (
+                            <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/profile/introduction')}>
+                                <View style={styles.actionCardContent}>
+                                    <Text style={styles.actionCardTitle}>나의 소개 등록하기</Text>
+                                    <Text style={styles.actionCardDesc}>소개를 등록하면{'\n'}지원 수락 확률이 올라가요.</Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {/* 나의 리뷰 */}
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <View style={styles.reviewTitleRow}>
+                                <Text style={styles.sectionTitle}>나의 리뷰</Text>
+                                <Text style={styles.reviewRating}>평점 {MOCK_USER.rating}</Text>
+                            </View>
+                            <TouchableOpacity style={styles.moreLink}>
+                                <Text style={styles.moreLinkText}>더보기</Text>
+                                <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {MOCK_REVIEWS.map((review) => (
+                            <View key={review.id} style={styles.reviewCard}>
+                                <View style={styles.reviewHeader}>
+                                    <Text style={styles.reviewPatient}>{review.patientName}</Text>
+                                    <View style={styles.reviewStars}>
+                                        {renderStars(review.rating)}
+                                    </View>
+                                </View>
+                                <Text style={styles.reviewPeriod}>기간 {review.period}</Text>
+                                <Text style={styles.reviewContent}>{review.content}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    <View style={{ height: 100 }} />
+                </ScrollView>
+            )}
+
+            {/* 간병일지 Tab Content */}
+            {activeTab === '간병일지' && (
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    {/* Patient Header */}
+                    {currentPatient && (
+                        <TouchableOpacity style={styles.patientHeader}>
+                            <View style={styles.patientInfo}>
+                                <Text style={styles.patientName}>
+                                    {currentPatient.name} ({currentPatient.age}세, {currentPatient.gender})
+                                </Text>
+                                <View style={styles.patientTags}>
+                                    {currentPatient.tags.map((tag, index) => (
+                                        <View key={index} style={styles.patientTag}>
+                                            <Text style={styles.patientTagText}>{tag}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#3B82F6" />
                         </TouchableOpacity>
                     )}
-                </View>
 
-                {/* 나의 리뷰 */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <View style={styles.reviewTitleRow}>
-                            <Text style={styles.sectionTitle}>나의 리뷰</Text>
-                            <Text style={styles.reviewRating}>평점 {MOCK_USER.rating}</Text>
-                        </View>
-                        <TouchableOpacity style={styles.moreLink}>
-                            <Text style={styles.moreLinkText}>더보기</Text>
-                            <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
+                    {/* Date Navigation */}
+                    <View style={styles.dateNavigation}>
+                        <TouchableOpacity onPress={() => navigateDate('prev')} style={styles.dateArrow}>
+                            <Ionicons name="chevron-back" size={24} color="#374151" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.dateDisplay}>
+                            <Text style={styles.dateText}>{formatDisplayDate(selectedDate)}</Text>
+                            <Ionicons name="caret-down" size={14} color="#DC2626" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigateDate('next')} style={styles.dateArrow}>
+                            <Ionicons name="chevron-forward" size={24} color="#374151" />
                         </TouchableOpacity>
                     </View>
 
-                    {MOCK_REVIEWS.map((review) => (
-                        <View key={review.id} style={styles.reviewCard}>
-                            <View style={styles.reviewHeader}>
-                                <Text style={styles.reviewPatient}>{review.patientName}</Text>
-                                <View style={styles.reviewStars}>
-                                    {renderStars(review.rating)}
-                                </View>
-                            </View>
-                            <Text style={styles.reviewPeriod}>기간 {review.period}</Text>
-                            <Text style={styles.reviewContent}>{review.content}</Text>
-                        </View>
-                    ))}
-                </View>
+                    {/* Today's Journal Section */}
+                    <View style={styles.journalSection}>
+                        <Text style={styles.journalSectionTitle}>오늘의 일지</Text>
 
-                <View style={{ height: 100 }} />
-            </ScrollView>
+                        <JournalCard
+                            type="morning"
+                            data={currentEntry?.morning}
+                            onPress={() => router.push('/caregiving-journal/meal-record?time=morning')}
+                        />
+                        <JournalCard
+                            type="lunch"
+                            data={currentEntry?.lunch}
+                            onPress={() => router.push('/caregiving-journal/meal-record?time=lunch')}
+                        />
+                        <JournalCard
+                            type="dinner"
+                            data={currentEntry?.dinner}
+                            onPress={() => router.push('/caregiving-journal/meal-record?time=dinner')}
+                        />
+                        <JournalCard
+                            type="medical"
+                            data={currentEntry?.medicalRecord}
+                            onPress={() => router.push('/caregiving-journal/medical-record')}
+                        />
+                        <JournalCard
+                            type="activity"
+                            data={currentEntry?.activityRecord}
+                            onPress={() => router.push('/caregiving-journal/activity-record')}
+                        />
+                    </View>
+
+                    {/* Special Notes Section */}
+                    <View style={styles.specialNotesSection}>
+                        <Text style={styles.specialNotesTitle}>특이 및 전달 사항</Text>
+                        <View style={styles.specialNotesBox}>
+                            <TextInput
+                                style={styles.specialNotesInput}
+                                placeholder="특이 사항을 입력해주세요."
+                                placeholderTextColor="#9CA3AF"
+                                multiline
+                                value={specialNotes}
+                                onChangeText={setSpecialNotes}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={{ height: 100 }} />
+                </ScrollView>
+            )}
+
+            {/* 수익 Tab Content */}
+            {activeTab === '수익' && (
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    <View style={styles.comingSoonContainer}>
+                        <Ionicons name="wallet-outline" size={48} color="#9CA3AF" />
+                        <Text style={styles.comingSoonText}>수익 탭은 준비 중입니다.</Text>
+                    </View>
+                </ScrollView>
+            )}
         </SafeAreaView>
     );
 }
@@ -659,5 +794,106 @@ const styles = StyleSheet.create({
     chipText: {
         fontSize: 13,
         color: '#374151',
+    },
+    // Caregiving Journal Tab Styles
+    patientHeader: {
+        backgroundColor: '#fff',
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    patientInfo: {
+        flex: 1,
+    },
+    patientName: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 8,
+    },
+    patientTags: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    patientTag: {
+        backgroundColor: '#FEE2E2',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 4,
+    },
+    patientTagText: {
+        fontSize: 11,
+        color: '#DC2626',
+        fontWeight: '500',
+    },
+    dateNavigation: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    dateArrow: {
+        padding: 8,
+    },
+    dateDisplay: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        gap: 4,
+    },
+    dateText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#111827',
+    },
+    journalSection: {
+        padding: 16,
+    },
+    journalSectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 16,
+    },
+    specialNotesSection: {
+        padding: 16,
+        paddingTop: 0,
+    },
+    specialNotesTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#111827',
+        marginBottom: 12,
+    },
+    specialNotesBox: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        padding: 16,
+        minHeight: 100,
+    },
+    specialNotesInput: {
+        fontSize: 14,
+        color: '#374151',
+        lineHeight: 20,
+    },
+    comingSoonContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 100,
+        gap: 16,
+    },
+    comingSoonText: {
+        fontSize: 16,
+        color: '#9CA3AF',
     },
 });
