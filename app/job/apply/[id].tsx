@@ -48,7 +48,7 @@ export default function JobApplyScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={24} color="#EF4444" />
+                    <Ionicons name="chevron-back" size={24} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>간병 지원하기</Text>
                 <View style={styles.headerPlaceholder} />

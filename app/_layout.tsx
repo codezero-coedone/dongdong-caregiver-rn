@@ -51,6 +51,7 @@ export default function RootLayout() {
           <Stack.Screen name="signup" options={{ headerShown: false }} />
           <Stack.Screen name="profile" options={{ headerShown: false }} />
           <Stack.Screen name="care-history" options={{ headerShown: false }} />
+          <Stack.Screen name="job" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="permission" options={{ headerShown: false }} />
         </Stack>

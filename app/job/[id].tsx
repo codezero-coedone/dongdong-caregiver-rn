@@ -1,7 +1,9 @@
+import InfoBox from '@/components/ui/InfoBox';
+import PatientInfoCard from '@/components/ui/PatientInfoCard';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Mock 상세 데이터
@@ -80,7 +82,7 @@ export default function JobDetailScreen() {
                 {/* 간병 위치 */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="location" size={20} color="#EF4444" />
+                        <Image source={require('@/assets/images/Location.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>간병 위치</Text>
                     </View>
 
@@ -92,122 +94,77 @@ export default function JobDetailScreen() {
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>간병 장소</Text>
-                        <View style={styles.fieldValue}>
-                            <Text style={styles.fieldValueText}>
-                                {job.location.name}({job.location.address})
-                            </Text>
-                        </View>
+                        <InfoBox value={`${job.location.name}(${job.location.address})`} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>상세 주소</Text>
-                        <View style={styles.fieldValueDisabled}>
-                            <Text style={styles.fieldValueDisabledText}>
-                                {job.location.detailAddress}
-                            </Text>
-                        </View>
+                        <InfoBox variant="secret" />
                     </View>
                 </View>
 
                 {/* 간병 기간 */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="calendar" size={20} color="#3B82F6" />
+                        <Image source={require('@/assets/images/Calendar.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>간병 기간</Text>
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>기간</Text>
-                        <View style={styles.fieldValue}>
-                            <Text style={styles.fieldValueText}>
-                                {job.schedule.startDate} - {job.schedule.endDate}
-                            </Text>
-                        </View>
+                        <InfoBox value={`${job.schedule.startDate} - ${job.schedule.endDate}`} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>근무 요일</Text>
-                        <View style={styles.fieldValue}>
-                            <Text style={styles.fieldValueText}>{job.schedule.workDays}</Text>
-                        </View>
+                        <InfoBox value={job.schedule.workDays} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>근무 시간</Text>
-                        <View style={styles.fieldValue}>
-                            <Text style={styles.fieldValueText}>{job.schedule.workHours}</Text>
-                        </View>
+                        <InfoBox value={job.schedule.workHours} />
                     </View>
                 </View>
 
                 {/* 환자 정보 */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="person" size={20} color="#3B82F6" />
+                        <Image source={require('@/assets/images/Person.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>환자 정보</Text>
                     </View>
 
-                    <View style={styles.patientCard}>
-                        <View style={styles.matchBadge}>
-                            <Text style={styles.matchBadgeText}>폐암 {job.patient.matchCount}기</Text>
-                        </View>
-                        <Text style={styles.patientName}>
-                            {job.patient.name} ({job.patient.age}세, {job.patient.gender})
-                        </Text>
-                        <View style={styles.patientDetails}>
-                            <View style={styles.patientDetailRow}>
-                                <Text style={styles.patientDetailLabel}>키</Text>
-                                <Text style={styles.patientDetailValue}>{job.patient.height}</Text>
-                            </View>
-                            <View style={styles.patientDetailRow}>
-                                <Text style={styles.patientDetailLabel}>몸무게</Text>
-                                <Text style={styles.patientDetailValue}>{job.patient.weight}</Text>
-                            </View>
-                            <View style={styles.patientDetailRow}>
-                                <Text style={styles.patientDetailLabel}>진단명</Text>
-                                <Text style={styles.patientDetailValue}>{job.patient.diagnosis}</Text>
-                            </View>
-                        </View>
-                    </View>
+                    <PatientInfoCard patient={job.patient} isMatched={true} />
                 </View>
 
                 {/* 입원 사유 */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="medical" size={20} color="#3B82F6" />
+                        <Image source={require('@/assets/images/Write.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>입원 사유</Text>
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>입원 사유</Text>
-                        <View style={styles.fieldValue}>
-                            <Text style={styles.fieldValueText}>{job.admission.reason}</Text>
-                        </View>
+                        <InfoBox value={job.admission.reason} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>병실 종류</Text>
-                        <View style={styles.fieldValue}>
-                            <Text style={styles.fieldValueText}>{job.admission.roomType}</Text>
-                        </View>
+                        <InfoBox value={job.admission.roomType} />
                     </View>
                 </View>
 
                 {/* 간병 요청사항 */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Ionicons name="mail" size={20} color="#EF4444" />
+                        <Image source={require('@/assets/images/Mail_Open.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>간병 요청사항</Text>
                     </View>
 
                     {job.requirements.map((req, index) => (
                         <View key={index} style={styles.fieldGroup}>
                             <Text style={styles.fieldLabel}>{req.label}</Text>
-                            <View style={styles.fieldValue}>
-                                <Text style={[styles.fieldValueText, !req.value && styles.placeholder]}>
-                                    {req.value || '비어있음'}
-                                </Text>
-                            </View>
+                            <InfoBox value={req.value || '비어있음'} />
                         </View>
                     ))}
                 </View>
@@ -229,18 +186,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-    },
-    header: {
-        // Removed custom header styles
-    },
-    backButton: {
-        // Removed custom header styles
-    },
-    headerTitle: {
-        // Removed custom header styles
-    },
-    headerPlaceholder: {
-        // Removed custom header styles
     },
     content: {
         flex: 1,
@@ -283,68 +228,7 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         marginBottom: 8,
     },
-    fieldValue: {
-        backgroundColor: '#F9FAFB',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderRadius: 8,
-    },
-    fieldValueText: {
-        fontSize: 15,
-        color: '#111827',
-    },
-    fieldValueDisabled: {
-        backgroundColor: '#FEE2E2',
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderRadius: 8,
-    },
-    fieldValueDisabledText: {
-        fontSize: 15,
-        color: '#F87171',
-    },
-    patientCard: {
-        backgroundColor: '#F9FAFB',
-        borderRadius: 12,
-        padding: 16,
-    },
-    matchBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: '#3B82F6',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 4,
-        marginBottom: 8,
-    },
-    matchBadgeText: {
-        fontSize: 12,
-        color: '#fff',
-        fontWeight: '600',
-    },
-    patientName: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#111827',
-        marginBottom: 12,
-    },
-    patientDetails: {
-        gap: 8,
-    },
-    patientDetailRow: {
-        flexDirection: 'row',
-    },
-    patientDetailLabel: {
-        width: 60,
-        fontSize: 14,
-        color: '#6B7280',
-    },
-    patientDetailValue: {
-        fontSize: 14,
-        color: '#111827',
-    },
-    placeholder: {
-        color: '#9CA3AF',
-    },
+
     footer: {
         position: 'absolute',
         bottom: 0,
