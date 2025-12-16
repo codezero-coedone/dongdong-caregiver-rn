@@ -11,7 +11,7 @@ const MOCK_APPLICATION_DATA = {
         age: 68,
         gender: '남',
     },
-    tags: ['매칭 3기', '식사 가능', '배변 도움 필요'],
+    tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
     location: '서울특별시 강남구 삼성동',
     period: '2025.11.15~11.30',
     totalHours: '135시간 (하루 9시간)',

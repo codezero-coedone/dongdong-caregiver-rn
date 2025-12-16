@@ -18,7 +18,7 @@ const MOCK_CARE_DETAIL = {
         height: '173cm',
         weight: '60kg',
     },
-    tags: ['매칭 3기', '항암치료 중', '부분 도움'],
+    tags: ['폐암 3기', '항암치료 중', '부분 도움'],
     status: {
         diagnosis: '폐렴',
         mealAssist: '부분적 도움 필요',

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,15 +56,25 @@ export default function JobDetailScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={24} color="#EF4444" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>매칭 요청 상세보기</Text>
-                <View style={styles.headerPlaceholder} />
-            </View>
+        <SafeAreaView style={styles.container} edges={['bottom']}>
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    headerTitle: '매칭 요청 상세보기',
+                    headerTitleAlign: 'center',
+                    headerTitleStyle: {
+                        fontSize: 17,
+                        fontWeight: '600',
+                        color: '#111827',
+                    },
+                    headerTintColor: '#EF4444',
+                    headerBackTitle: '', // Hide back title
+                    headerShadowVisible: true,
+                    headerStyle: {
+                        backgroundColor: '#fff',
+                    },
+                }}
+            />
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 {/* 간병 위치 */}
@@ -139,7 +149,7 @@ export default function JobDetailScreen() {
 
                     <View style={styles.patientCard}>
                         <View style={styles.matchBadge}>
-                            <Text style={styles.matchBadgeText}>매칭 {job.patient.matchCount}기</Text>
+                            <Text style={styles.matchBadgeText}>폐암 {job.patient.matchCount}기</Text>
                         </View>
                         <Text style={styles.patientName}>
                             {job.patient.name} ({job.patient.age}세, {job.patient.gender})
@@ -221,24 +231,16 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        // Removed custom header styles
     },
     backButton: {
-        padding: 4,
+        // Removed custom header styles
     },
     headerTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#111827',
+        // Removed custom header styles
     },
     headerPlaceholder: {
-        width: 32,
+        // Removed custom header styles
     },
     content: {
         flex: 1,

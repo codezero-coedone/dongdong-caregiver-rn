@@ -24,7 +24,7 @@ const MOCK_ONGOING_CARE = {
         age: 68,
         gender: '남',
     },
-    tags: ['매칭 3기', '입원치료 중', '부분 도움'],
+    tags: ['폐암 3기', '입원치료 중', '부분 도움'],
     period: '2025.11.15~11.30',
     diagnosis: '폐렴 및 심압',
 };

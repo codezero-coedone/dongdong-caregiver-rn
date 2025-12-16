@@ -84,7 +84,7 @@ export const MOCK_PATIENT: Patient = {
     name: '이환자',
     age: 68,
     gender: '남',
-    tags: ['매칭 3기', '입원치료 중', '부분 도움'],
+    tags: ['폐암 3기', '입원치료 중', '부분 도움'],
 };
 
 // Mock 일지 데이터

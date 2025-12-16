@@ -20,7 +20,7 @@ const MOCK_JOBS = [
     patientName: '이환자',
     patientAge: 68,
     patientGender: '남',
-    tags: ['매칭 3기', '식사 가능', '배변 도움 필요'],
+    tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
     location: '서울특별시 강남구 삼성동',
     period: '2025.11.15 ~ 11.30, 매일',
     hours: '24시간',
@@ -47,7 +47,7 @@ const MOCK_JOBS = [
     patientName: '이환자',
     patientAge: 68,
     patientGender: '남',
-    tags: ['매칭 3기', '식사 가능'],
+    tags: ['폐암 3기', '식사 가능'],
     location: '서울특별시 송파구 잠실동',
     period: '2025.12.01 ~ 12.15, 매일',
     hours: '24시간',
@@ -145,7 +145,7 @@ function JobCard({ job }: JobCardProps) {
       {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.detailButton} onPress={handleViewDetail}>
-          <Typography variant="label1.medium" color="gray">상세보기</Typography>
+          <Typography variant="label1.medium" color="label">상세보기</Typography>
         </TouchableOpacity>
         <Space x={8} />
         <TouchableOpacity style={styles.applyButton}>
@@ -368,10 +368,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   sortDropdown: {
-    width: 65,
+    width: 100,
   },
   sortDropdownText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#171719', // Label color
     fontWeight: '500',
   },
