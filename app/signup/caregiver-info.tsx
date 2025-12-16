@@ -233,6 +233,20 @@ export default function CaregiverInfoScreen() {
                     />
                 </View>
 
+                {/* Referral Code Field */}
+                <View className="mb-6">
+                    <Text className="text-sm font-bold mb-2 text-gray-800">
+                        지인 추천 코드 입력
+                    </Text>
+                    <Input
+                        containerClassName="mb-0"
+                        placeholder="예) A12345"
+                    />
+                    <Text className="text-gray-400 text-sm mt-2">
+                        가족이나 지인에게 추천받고 가입하셨다면 코드를 입력해주세요
+                    </Text>
+                </View>
+
             </ScrollView>
 
             {/* Submit Button */}

@@ -1,6 +1,7 @@
 import ChevronIcon from '@/assets/images/icons/bottom_chervon.svg';
 import CheckboxOff from '@/assets/images/icons/checkbox_off.svg';
 import CheckboxOn from '@/assets/images/icons/checkbox_on.svg';
+import Logo from '@/assets/images/logo.svg';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -65,8 +66,10 @@ export default function TermsScreen() {
                     약관에 동의하시면{'\n'}회원가입이 완료됩니다.
                 </Text>
 
-                {/* Placeholder Image */}
-                <View style={styles.imagePlaceholder} />
+                {/* Logo */}
+                <View style={styles.logoContainer}>
+                    <Logo width={140} height={137} />
+                </View>
 
                 {/* All Agree */}
                 <View style={styles.allAgreeContainer}>
@@ -142,11 +145,8 @@ const styles = StyleSheet.create({
         lineHeight: 32,
         marginBottom: 24,
     },
-    imagePlaceholder: {
-        width: '100%',
-        height: 200,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 12,
+    logoContainer: {
+        alignItems: 'flex-start',
         marginBottom: 32,
     },
     allAgreeContainer: {

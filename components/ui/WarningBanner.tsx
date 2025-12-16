@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface WarningBannerProps {
     message: string;
@@ -7,13 +7,27 @@ interface WarningBannerProps {
 
 export default function WarningBanner({ message }: WarningBannerProps) {
     return (
-        <View
-            className="rounded-lg px-4 py-3 mb-6"
-            style={{ borderWidth: 1, borderColor: 'rgba(236, 72, 153, 0.2)' }}
-        >
-            <Text className="text-blue-600 text-center text-sm font-medium">
+        <View style={styles.container}>
+            <Text style={styles.text}>
                 {message}
             </Text>
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: {
+        backgroundColor: '#EEF2FF',
+        borderRadius: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        marginBottom: 24,
+    },
+    text: {
+        color: '#3B82F6',
+        textAlign: 'left',
+        fontSize: 15,
+        fontWeight: '600',
+        lineHeight: 22,
+    },
+});

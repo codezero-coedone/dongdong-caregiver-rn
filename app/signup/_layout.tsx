@@ -6,6 +6,7 @@ export default function SignupLayout() {
             screenOptions={{
                 headerShadowVisible: false,
                 headerTitleAlign: 'center',
+                headerBackTitle: '',
                 headerTitleStyle: {
                     fontWeight: 'bold',
                     fontSize: 17,
