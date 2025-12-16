@@ -1,19 +1,19 @@
+import ExistingMemberModal from '@/components/auth/ExistingMemberModal';
+import Button from '@/components/ui/Button';
+import DateInput from '@/components/ui/DateInput';
+import Input from '@/components/ui/Input';
+import MaskedRRNInput from '@/components/ui/MaskedRRNInput';
+import SelectInput from '@/components/ui/SelectInput';
+import ToggleButtonGroup from '@/components/ui/ToggleButtonGroup';
 import { requestPhoneVerification, verifyPhoneCode } from '@/services/authService';
 import { useAuthStore } from '@/store/authStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
-import ExistingMemberModal from '../../components/auth/ExistingMemberModal';
-import Button from '../../components/ui/Button';
-import DateInput from '../../components/ui/DateInput';
-import Input from '../../components/ui/Input';
-import MaskedRRNInput from '../../components/ui/MaskedRRNInput';
-import SelectInput from '../../components/ui/SelectInput';
-import Typography from '../../components/ui/Typography';
 
 // 비자 종류 옵션
 const VISA_TYPES = [
@@ -236,51 +236,15 @@ export default function SignupInfoScreen() {
 
             <ScrollView className="flex-1 px-6 pt-6">
                 {/* Toggle */}
-                <View className="flex-row mb-8 overflow-hidden">
-                    <TouchableOpacity
-                        className="flex-1 py-3 items-center justify-center"
-                        style={isDomestic ? {
-                            backgroundColor: 'rgba(0, 102, 255, 0.05)',
-                            borderWidth: 1,
-                            borderColor: 'rgba(0, 102, 255, 0.43)',
-                            borderTopLeftRadius: 8,
-                            borderBottomLeftRadius: 8,
-                            borderTopRightRadius: 0,
-                            borderBottomRightRadius: 0,
-                        } : {
-                            backgroundColor: 'white',
-                            borderTopLeftRadius: 8,
-                            borderBottomLeftRadius: 8,
-                            borderTopRightRadius: 0,
-                            borderBottomRightRadius: 0,
-                        }}
-                        onPress={() => setIsDomestic(true)}
-                    >
-                        <Typography variant="headline2.medium" color={isDomestic ? 'primary' : 'gray'}>내국인</Typography>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        className="flex-1 py-3 items-center justify-center"
-                        style={!isDomestic ? {
-                            backgroundColor: 'rgba(0, 102, 255, 0.05)',
-                            borderWidth: 1,
-                            borderColor: 'rgba(0, 102, 255, 0.43)',
-                            borderTopLeftRadius: 0,
-                            borderBottomLeftRadius: 0,
-                            borderTopRightRadius: 8,
-                            borderBottomRightRadius: 8,
-                        } : {
-                            backgroundColor: 'white',
-                            borderTopLeftRadius: 0,
-                            borderBottomLeftRadius: 0,
-                            borderTopRightRadius: 8,
-                            borderBottomRightRadius: 8,
-                        }}
-                        onPress={() => setIsDomestic(false)}
-                    >
-                        <Typography variant="headline2.medium" color={!isDomestic ? 'primary' : 'gray'}>외국인</Typography>
-                    </TouchableOpacity>
-                </View>
+                <ToggleButtonGroup
+                    options={[
+                        { label: '내국인', value: 'domestic' },
+                        { label: '외국인', value: 'foreigner' },
+                    ]}
+                    selectedValue={isDomestic ? 'domestic' : 'foreigner'}
+                    onSelect={(value) => setIsDomestic(value === 'domestic')}
+                    variant="headline"
+                />
 
                 {/* 내국인 Form */}
                 {isDomestic ? (
@@ -557,6 +521,10 @@ export default function SignupInfoScreen() {
                         onPress={isDomestic
                             ? domesticForm.handleSubmit(onDomesticSubmit)
                             : foreignerForm.handleSubmit(onForeignerSubmit)
+                        }
+                        disabled={isDomestic
+                            ? !domesticForm.formState.isValid
+                            : !foreignerForm.formState.isValid
                         }
                     />
                 )}

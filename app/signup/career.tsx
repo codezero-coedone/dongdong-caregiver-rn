@@ -1,11 +1,13 @@
+import Button from '@/components/ui/Button';
+import ToggleButtonGroup from '@/components/ui/ToggleButtonGroup';
+import Typography from '@/components/ui/Typography';
+import { useAuthStore } from '@/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Button from '../../components/ui/Button';
-import { useAuthStore } from '../../store/authStore';
 
 // 자격증 목록
 const CERTIFICATES = [
@@ -112,17 +114,17 @@ export default function CareerScreen() {
             <ScrollView style={styles.scrollView}>
                 {/* 주의사항 배너 */}
                 <View style={styles.warningBanner}>
-                    <Text style={styles.warningTitle}>주의해주세요!</Text>
+                    <Typography variant="label2.bold" color="#0066FF">주의해주세요!</Typography>
                     <View style={styles.warningList}>
-                        <Text style={styles.warningItem}>
+                        <Typography variant="label2.regular" color="label">
                             1. 개인정보(주민등록번호, 주소 등)를 반드시 가린 후 촬영해주세요.
-                        </Text>
-                        <Text style={styles.warningItem}>
+                        </Typography>
+                        <Typography variant="label2.regular" color="label">
                             2. 자격증 명칭과 동일한 자격증 사진을 전체 이미지가 보이도록 촬영해주세요
-                        </Text>
-                        <Text style={styles.warningItem}>
+                        </Typography>
+                        <Typography variant="label2.regular" color="label">
                             3. 등록한 자격증은 인감 지원 시 보호자가 확인할 수 있습니다.
-                        </Text>
+                        </Typography>
                     </View>
                 </View>
 
@@ -131,38 +133,15 @@ export default function CareerScreen() {
                     <Text style={styles.sectionTitle}>
                         간병 경력이 있으신가요? <Text style={styles.required}>*</Text>
                     </Text>
-                    <View style={styles.toggleContainer}>
-                        <TouchableOpacity
-                            style={[
-                                styles.toggleButton,
-                                styles.toggleButtonLeft,
-                                !hasExperience && styles.toggleButtonActive,
-                            ]}
-                            onPress={() => setHasExperience(false)}
-                        >
-                            <Text style={[
-                                styles.toggleButtonText,
-                                !hasExperience && styles.toggleButtonTextActive,
-                            ]}>
-                                신입
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[
-                                styles.toggleButton,
-                                styles.toggleButtonRight,
-                                hasExperience && styles.toggleButtonActive,
-                            ]}
-                            onPress={() => setHasExperience(true)}
-                        >
-                            <Text style={[
-                                styles.toggleButtonText,
-                                hasExperience && styles.toggleButtonTextActive,
-                            ]}>
-                                경력
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
+                    <ToggleButtonGroup
+                        options={[
+                            { label: '신입', value: 'new' },
+                            { label: '경력', value: 'experienced' },
+                        ]}
+                        selectedValue={hasExperience ? 'experienced' : 'new'}
+                        onSelect={(value) => setHasExperience(value === 'experienced')}
+                        variant="label"
+                    />
                 </View>
 
                 {/* 자격증 선택 */}
@@ -273,7 +252,7 @@ const styles = StyleSheet.create({
         paddingTop: 24,
     },
     warningBanner: {
-        backgroundColor: '#FDF2F8',
+        backgroundColor: 'rgba(0, 102, 255, 0.08)',  // primary.normal with 8% opacity
         borderRadius: 12,
         padding: 16,
         marginBottom: 24,
@@ -281,7 +260,7 @@ const styles = StyleSheet.create({
     warningTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#EC4899',
+        color: '#0066FF',  // primary.normal
         marginBottom: 12,
     },
     warningList: {
@@ -303,39 +282,6 @@ const styles = StyleSheet.create({
     },
     required: {
         color: '#EF4444',
-    },
-    toggleContainer: {
-        flexDirection: 'row',
-    },
-    toggleButton: {
-        flex: 1,
-        paddingVertical: 14,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        backgroundColor: '#fff',
-    },
-    toggleButtonLeft: {
-        borderTopLeftRadius: 8,
-        borderBottomLeftRadius: 8,
-        borderRightWidth: 0,
-    },
-    toggleButtonRight: {
-        borderTopRightRadius: 8,
-        borderBottomRightRadius: 8,
-    },
-    toggleButtonActive: {
-        borderColor: '#3B82F6',
-        backgroundColor: 'rgba(59, 130, 246, 0.05)',
-    },
-    toggleButtonText: {
-        fontSize: 15,
-        fontWeight: '500',
-        color: '#6B7280',
-    },
-    toggleButtonTextActive: {
-        color: '#3B82F6',
     },
     certificateList: {
         gap: 12,

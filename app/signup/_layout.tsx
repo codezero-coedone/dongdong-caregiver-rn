@@ -1,12 +1,19 @@
-import { Stack } from 'expo-router';
+import { Stack, useNavigation } from 'expo-router';
+import { Text, TouchableOpacity } from 'react-native';
 
 export default function SignupLayout() {
+    const navigation = useNavigation();
+
     return (
         <Stack
             screenOptions={{
                 headerShadowVisible: false,
-                headerTitleAlign: 'center',
+                headerStyle: {
+                    backgroundColor: '#FFFFFF',
+                },
+                headerTitleAlign: 'left',
                 headerBackTitle: '',
+                headerBackButtonDisplayMode: 'minimal',
                 headerTitleStyle: {
                     fontWeight: 'bold',
                     fontSize: 17,
@@ -17,6 +24,9 @@ export default function SignupLayout() {
                 name="info"
                 options={{
                     title: '기본 정보 입력',
+                    headerLeft: () => <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Text>뒤로가기</Text>
+                    </TouchableOpacity>,
                 }}
             />
             <Stack.Screen

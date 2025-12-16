@@ -1,10 +1,15 @@
+import FilterModal from '@/components/home/FilterModal';
+import Chip from '@/components/ui/Chip';
+import Divider from '@/components/ui/Divider';
+import HeaderWithLogo from '@/components/ui/HeaderWithLogo';
+import Space from '@/components/ui/Space';
+import Typography from '@/components/ui/Typography';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import FilterModal from '../../components/home/FilterModal';
 
 // 목업 데이터
 const MOCK_JOBS = [
@@ -77,7 +82,7 @@ function JobCard({ job }: JobCardProps) {
           <View style={[styles.typeBadge, isHourly && styles.typeBadgeHourly]}>
             <Ionicons
               name={isHourly ? 'time-outline' : 'document-text-outline'}
-              size={14}
+              size={12}
               color={isHourly ? '#10B981' : '#3B82F6'}
             />
             <Text style={[styles.typeBadgeText, isHourly && styles.typeBadgeTextHourly]}>
@@ -85,55 +90,66 @@ function JobCard({ job }: JobCardProps) {
             </Text>
           </View>
           {job.urgency && (
-            <View style={styles.urgencyBadge}>
-              <Text style={styles.urgencyText}>{job.urgency}</Text>
-            </View>
+            <Chip label={job.urgency} variant="secondary" />
           )}
         </View>
-        <Text style={styles.timeAgo}>{job.timeAgo}</Text>
+        <Typography variant="label2.regular" color="gray">{job.timeAgo}</Typography>
       </View>
 
       {/* Patient Info */}
-      <Text style={styles.patientName}>
+      <Space y={12} />
+      <Typography variant="headline1.bold" color="black">
         {job.patientName} ({job.patientAge}세, {job.patientGender})
-      </Text>
+      </Typography>
 
       {/* Tags */}
+      <Space y={8} />
       <View style={styles.tags}>
         {job.tags.map((tag, index) => (
-          <View key={index} style={styles.tag}>
-            <Text style={styles.tagText}>{tag}</Text>
-          </View>
+          <Chip
+            key={index}
+            label={tag}
+            variant={index === 0 ? 'primary' : 'default'}
+          />
         ))}
       </View>
+
+      <Space y={2} />
 
       {/* Details */}
       <View style={styles.details}>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>위치</Text>
-          <Text style={styles.detailValue}>{job.location}</Text>
+          <Typography variant="label2.regular" color="gray" style={styles.detailLabel}>위치</Typography>
+          <View style={styles.detailDivider} />
+          <Typography variant="label2.regular" color="labelAlternative" style={styles.detailValue}>{job.location}</Typography>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>간병기간</Text>
-          <Text style={styles.detailValue}>{job.period}</Text>
+          <Typography variant="label2.regular" color="gray" style={styles.detailLabel}>간병기간</Typography>
+          <View style={styles.detailDivider} />
+          <Typography variant="label2.regular" color="labelAlternative" style={styles.detailValue}>{job.period}</Typography>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>간병시간</Text>
-          <Text style={styles.detailValue}>{job.hours}</Text>
+          <Typography variant="label2.regular" color="gray" style={styles.detailLabel}>간병시간</Typography>
+          <View style={styles.detailDivider} />
+          <Typography variant="label2.regular" color="labelAlternative" style={styles.detailValue}>{job.hours}</Typography>
         </View>
         <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>급여</Text>
-          <Text style={styles.payValue}>{job.pay}</Text>
+          <Typography variant="label2.regular" color="gray" style={styles.detailLabel}>급여</Typography>
+          <View style={styles.detailDivider} />
+          <Typography variant="label2.bold" color="primary" style={styles.payValue}>{job.pay}</Typography>
         </View>
       </View>
+
+      <Space y={2} />
 
       {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.detailButton} onPress={handleViewDetail}>
-          <Text style={styles.detailButtonText}>상세보기</Text>
+          <Typography variant="label1.medium" color="gray">상세보기</Typography>
         </TouchableOpacity>
+        <Space x={8} />
         <TouchableOpacity style={styles.applyButton}>
-          <Text style={styles.applyButtonText}>지원하기</Text>
+          <Typography variant="label1.bold" color="primary">지원하기</Typography>
         </TouchableOpacity>
       </View>
     </View>
@@ -153,18 +169,13 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logo}>☺️ 동반자동행</Text>
-        </View>
-        <TouchableOpacity style={styles.alertButton}>
-          <Ionicons name="notifications-outline" size={24} color="#374151" />
-        </TouchableOpacity>
-      </View>
+      <HeaderWithLogo />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Title */}
-        <Text style={styles.title}>매칭 공고를 확인해보세요.</Text>
+        <Typography variant="headline1.bold" color="strong" style={styles.title}>
+          매칭 공고를 확인해보세요.
+        </Typography>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -180,33 +191,43 @@ export default function HomeScreen() {
 
         {/* Filter Bar */}
         <View style={styles.filterBar}>
-          <Text style={styles.filterText}>상세조건을 선택해 주세요</Text>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setFilterModalVisible(true)}
-          >
-            <Ionicons name="options-outline" size={16} color="#3B82F6" />
-            <Text style={styles.filterButtonText}>상세조건</Text>
-          </TouchableOpacity>
+          <Typography variant="body2.medium" color="labelAlternative">상세조건을 선택해 주세요</Typography>
+          <View style={styles.filterRight}>
+            <View style={styles.verticalDivider} />
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setFilterModalVisible(true)}
+            >
+              <Ionicons name="options-outline" size={16} color="#374151" />
+              <Text style={styles.filterButtonText}>상세조건</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Section Divider */}
+        <Space y={20} />
+        <Divider height={8} color="#F5F5F5" />
+        <Space y={24.5} />
 
         {/* Results Header */}
         <View style={styles.resultsHeader}>
-          <Text style={styles.resultsCount}>총 {MOCK_JOBS.length}건</Text>
-          <Dropdown
-            style={styles.sortDropdown}
-            selectedTextStyle={styles.sortDropdownText}
-            iconStyle={styles.sortDropdownIcon}
-            data={SORT_OPTIONS}
-            maxHeight={200}
-            labelField="label"
-            valueField="value"
-            value={sortOption}
-            onChange={item => setSortOption(item.value)}
-            renderRightIcon={() => (
-              <Ionicons name="chevron-down" size={14} color="#374151" />
-            )}
-          />
+          <Typography variant="label1.bold" color="label">총 {MOCK_JOBS.length}건</Typography>
+          <View style={styles.dropdownContainer}>
+            <Dropdown
+              style={styles.sortDropdown}
+              selectedTextStyle={styles.sortDropdownText}
+              iconStyle={styles.sortDropdownIcon}
+              data={SORT_OPTIONS}
+              maxHeight={200}
+              labelField="label"
+              valueField="value"
+              value={sortOption}
+              onChange={item => setSortOption(item.value)}
+              renderRightIcon={() => (
+                <Ionicons name="caret-down" size={12} color="#171719" style={{ marginLeft: 4 }} />
+              )}
+            />
+          </View>
         </View>
 
         {/* Job List */}
@@ -235,7 +256,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -271,19 +292,23 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    marginLeft: 8,
+    marginLeft: 12,
     color: '#111827',
+  },
+  searchIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
   },
   filterBar: {
     flexDirection: 'row',
@@ -295,21 +320,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
+  filterRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  verticalDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E5E7EB',
+    marginRight: 12,
+  },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: '#E5E7EB',
     backgroundColor: '#fff',
   },
   filterButtonText: {
     fontSize: 13,
-    color: '#3B82F6',
+    color: '#374151',
     fontWeight: '500',
     marginLeft: 4,
+  },
+  filterIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    marginLeft: 8,
   },
   resultsHeader: {
     flexDirection: 'row',
@@ -317,36 +359,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  resultsCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+  dropdownContainer: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   sortDropdown: {
-    width: 100,
+    width: 65,
   },
   sortDropdownText: {
     fontSize: 14,
-    color: '#374151',
-    textAlign: 'right',
+    color: '#171719', // Label color
+    fontWeight: '500',
   },
   sortDropdownIcon: {
-    width: 14,
-    height: 14,
+    width: 12,
+    height: 12,
   },
   jobList: {
-    gap: 12,
+    gap: 20,
     paddingBottom: 100,
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    // Removed shadow as per flat design, or keep very subtle if needed
   },
   cardHeader: {
     flexDirection: 'row',
@@ -357,41 +400,29 @@ const styles = StyleSheet.create({
   cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   typeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: '#EFF6FF',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
     gap: 4,
   },
   typeBadgeHourly: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: '#ECFDF5',
   },
   typeBadgeText: {
     fontSize: 12,
     color: '#3B82F6',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   typeBadgeTextHourly: {
     color: '#10B981',
   },
-  urgencyBadge: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-  },
-  urgencyText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
+
   timeAgo: {
     fontSize: 12,
     color: '#9CA3AF',
@@ -408,18 +439,8 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 12,
   },
-  tag: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  tagText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
   details: {
-    gap: 6,
+    gap: 8,
     marginBottom: 16,
   },
   detailRow: {
@@ -429,7 +450,13 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 13,
     color: '#9CA3AF',
-    width: 60,
+    width: 52,
+  },
+  detailDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 8,
   },
   detailValue: {
     fontSize: 13,
@@ -440,6 +467,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#EF4444',
     fontWeight: '600',
+    // handled by Typography
   },
   actions: {
     flexDirection: 'row',
@@ -452,6 +480,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   detailButtonText: {
     fontSize: 14,
@@ -462,8 +491,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
+    borderWidth: 1,
+    borderColor: '#0066FF',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   applyButtonText: {
     fontSize: 14,

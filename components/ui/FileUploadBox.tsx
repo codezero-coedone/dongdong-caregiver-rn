@@ -31,7 +31,7 @@ export default function FileUploadBox({
                 <View className="items-center">
                     <View
                         className="w-10 h-10 rounded-full items-center justify-center mb-2"
-                        style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+                        style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
                     >
                         <Ionicons name="cloud-upload-outline" size={24} color="#3B82F6" />
                     </View>

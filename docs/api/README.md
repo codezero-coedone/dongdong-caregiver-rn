@@ -26,6 +26,7 @@ docs/api/
 | 문자 인증 요청 | POST /api/auth/sms/request | [sms-request.md](./standby/sms-request.md) |
 | 문자 검증 | POST /api/auth/sms/verify | [sms-verify.md](./standby/sms-verify.md) |
 | 간병인 국내 추가 정보 | POST /api/caregiver/domestic-info | [caregiver-domestic-info.md](./standby/caregiver-domestic-info.md) |
+| 파일 업로드 | POST /api/files/upload | [file-upload.md](./standby/file-upload.md) |
 
 ### 🔵 In Progress (개발 중)
 
