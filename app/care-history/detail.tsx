@@ -47,6 +47,7 @@ const MOCK_CARE_DETAIL = {
     weekdays: '월, 화, 수',
     workHours: '09:00 ~ 18:00',
     hoursPerDay: 9,
+    callRequestTime: '09:00, 13:00',
   },
 };
 
@@ -132,83 +133,88 @@ export default function CareDetailScreen() {
 
         {/* 기본 정보 섹션 */}
         <View style={styles.section}>
-          <Text style={styles.sectionSubtitle}>기본 정보</Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>생년월일</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.patient.birthDate}
-              </Text>
+          <View style={styles.infoCard}>
+            {/* 기본 정보 */}
+            <View>
+              <Text style={styles.cardSectionTitle}>기본 정보</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>생년월일</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.patient.birthDate}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>키</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.patient.height}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>몸무게</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.patient.weight}
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>키</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.patient.height}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>몸무게</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.patient.weight}
-              </Text>
-            </View>
-          </View>
-        </View>
 
-        {/* 환자 상태 섹션 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionSubtitle}>환자 상태</Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>진단명</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.status.diagnosis}
-              </Text>
+            {/* 환자 상태 */}
+            <View>
+              <Text style={styles.cardSectionTitle}>환자 상태</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>진단명</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.status.diagnosis}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>식사 도움</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.status.mealAssist}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>거동 상태</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.status.mobility}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>요청 사항</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.status.requests}
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>식사 도움</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.status.mealAssist}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>거동 상태</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.status.mobility}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>요청 사항</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.status.requests}
-              </Text>
-            </View>
-          </View>
-        </View>
 
-        {/* 보호자 섹션 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            <Text style={styles.sectionIcon}>👥</Text> 보호자
-          </Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>이름</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.guardian.name}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>
-                {isCompleted ? '휴대번호' : '휴대폰'}
-              </Text>
-              <Text style={styles.infoValue}>{guardianPhone}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>관계</Text>
-              <Text style={styles.infoValue}>
-                {MOCK_CARE_DETAIL.guardian.relation}
-              </Text>
+            {/* 보호자 */}
+            <View>
+              <Text style={styles.cardSectionTitle}>보호자</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>이름</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.guardian.name}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>휴대폰</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>{guardianPhone}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>관계</Text>
+                <View style={styles.verticalDivider} />
+                <Text style={styles.infoValue}>
+                  {MOCK_CARE_DETAIL.guardian.relation}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -255,6 +261,12 @@ export default function CareDetailScreen() {
               {MOCK_CARE_DETAIL.period.hoursPerDay}시간)
             </Text>
           </View>
+          <Text style={styles.subSectionTitle}>전화 요청 시간</Text>
+          <View style={styles.periodCard}>
+            <Text style={styles.periodText}>
+              {MOCK_CARE_DETAIL.period.callRequestTime}
+            </Text>
+          </View>
         </View>
 
         <View style={{ height: 40 }} />
@@ -295,9 +307,7 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 8,
-    borderBottomColor: '#F3F4F6',
+    paddingVertical: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -314,12 +324,23 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 12,
   },
-  patientCard: {
+  infoCard: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
+    padding: 20,
+    gap: 20,
+  },
+  cardSectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  patientCard: {
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#3B82F6',
+    borderColor: '#0066FF',
   },
   patientCardCompleted: {
     borderColor: '#E5E7EB',
@@ -358,51 +379,62 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
   },
-  infoGrid: {
-    gap: 12,
-  },
   infoRow: {
     flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    paddingHorizontal: 14,
+    alignItems: 'center',
     paddingVertical: 12,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    width: 80,
+    fontSize: 15,
+    color: '#37383C9C',
+    width: 60,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: '#70737C38',
+    marginHorizontal: 8,
   },
   infoValue: {
-    fontSize: 14,
-    color: '#111827',
-    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2E2F33E0',
   },
   locationCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 8,
+    // backgroundColor: '#F9FAFB',
+    borderColor: '#70737C29',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
   locationText: {
     fontSize: 14,
-    color: '#374151',
+    color: '#',
   },
   periodCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 8,
+    // backgroundColor: '#F9FAFB',
+    borderColor: '#70737C29',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
   periodText: {
     fontSize: 14,
     color: '#374151',
   },
+  subSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2E2F33E0',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+
   buttonContainer: {
     padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
   },
 });

@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -67,6 +66,36 @@ const MOCK_REVIEWS = [
     period: '2025.11.19~2025.11.26',
     content:
       '"센스가 있으셔서 매번 말안해도 척척해주시더라구요 이래서 경력직을 쓰나봅니다ㅎㅎ"',
+  },
+];
+
+const MOCK_EARNING_SUMMARY = {
+  total: 1123000,
+  workDays: 10,
+  workHours: 80,
+};
+
+const MOCK_EARNINGS = [
+  {
+    id: '1',
+    noticeNo: '12345',
+    patientName: '이환자',
+    period: '2025.11.15 ~ 11.30',
+    amount: 500000,
+  },
+  {
+    id: '2',
+    noticeNo: '12345',
+    patientName: '이환자',
+    period: '2025.11.15 ~ 11.30',
+    amount: 100000,
+  },
+  {
+    id: '3',
+    noticeNo: '12345',
+    patientName: '이환자',
+    period: '2025.11.15 ~ 11.30',
+    amount: 523000,
   },
 ];
 
@@ -494,7 +523,7 @@ export default function MyScreen() {
           </View>
 
           {/* Special Notes Section */}
-          <View style={styles.specialNotesSection}>
+          {/* <View style={styles.specialNotesSection}>
             <Text style={styles.specialNotesTitle}>특이 및 전달 사항</Text>
             <View style={styles.specialNotesBox}>
               <TextInput
@@ -506,7 +535,7 @@ export default function MyScreen() {
                 onChangeText={setSpecialNotes}
               />
             </View>
-          </View>
+          </View> */}
 
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -515,10 +544,77 @@ export default function MyScreen() {
       {/* 수익 Tab Content */}
       {activeTab === '수익' && (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.comingSoonContainer}>
-            <Ionicons name="wallet-outline" size={48} color="#9CA3AF" />
-            <Text style={styles.comingSoonText}>수익 탭은 준비 중입니다.</Text>
+          {/* 이번달 총 수익 */}
+          <View style={styles.earningHeader}>
+            <Text style={styles.earningTitle}>이번달 총 수익</Text>
+            <Text style={styles.earningTotal}>
+              {MOCK_EARNING_SUMMARY.total.toLocaleString()}원
+            </Text>
           </View>
+
+          {/* 근무 요약 */}
+          <View style={styles.earningSummaryCard}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>근무 일수</Text>
+              <Text style={styles.summaryValue}>
+                {MOCK_EARNING_SUMMARY.workDays}일
+              </Text>
+            </View>
+            <View style={[styles.summaryRow, { marginBottom: 0 }]}>
+              <Text style={styles.summaryLabel}>근무 시간</Text>
+              <Text style={styles.summaryValue}>
+                {MOCK_EARNING_SUMMARY.workHours}시간
+              </Text>
+            </View>
+          </View>
+
+          {/* 출금 관련 */}
+          <TouchableOpacity style={styles.linkRow}>
+            <Text style={styles.linkText}>출금 계좌 설정</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.linkRow}>
+            <Text style={styles.linkText}>출금 내역</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <View style={styles.dividerWrapper}>
+            <View style={styles.divider} />
+          </View>
+
+          {/* 수익 내역 */}
+          <Text style={styles.earningListTitle}>수익 내역</Text>
+          <View style={styles.earningListSection}>
+            <View style={styles.earningMonthRow}>
+              <Ionicons name="chevron-back" size={20} color="#9CA3AF" />
+              <View style={styles.monthCenter}>
+                <Text style={styles.earningMonthText}>2025년 11월</Text>
+                <Ionicons name="caret-down" size={14} color="#111827" />
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+            </View>
+
+            {MOCK_EARNINGS.map((item) => (
+              <View key={item.id} style={styles.earningCard}>
+                <View style={styles.earningCardTop}>
+                  <Text style={styles.noticeText}>
+                    공고번호 {item.noticeNo}
+                  </Text>
+                  <Text style={styles.periodText}>{item.period}</Text>
+                </View>
+
+                <View style={styles.earningCardBottom}>
+                  <Text style={styles.patientText}>{item.patientName}</Text>
+                  <Text style={styles.amountText}>
+                    {item.amount.toLocaleString()} 원
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ height: 80 }} />
         </ScrollView>
       )}
     </SafeAreaView>
@@ -923,75 +1019,76 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#0066FF',
+    marginHorizontal: 20,
+    marginVertical: 30,
   },
   patientInfo: {
     flex: 1,
   },
   patientName: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '600',
+    color: '#000000',
     marginBottom: 8,
   },
   patientTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 4,
   },
   patientTag: {
-    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#70737C29',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   patientTagText: {
-    fontSize: 11,
-    color: '#DC2626',
+    fontSize: 12,
+    color: '#37383C9C',
     fontWeight: '500',
   },
   dateNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
   dateArrow: {
-    padding: 8,
+    // padding: 8,
   },
   dateDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 4,
+    gap: 8,
   },
   dateText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: '#171719',
   },
   journalSection: {
-    padding: 16,
+    padding: 20,
   },
   journalSectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 20,
   },
   specialNotesSection: {
-    padding: 16,
+    padding: 20,
     paddingTop: 0,
   },
   specialNotesTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
+    color: '#000000',
+    marginBottom: 20,
   },
   specialNotesBox: {
     backgroundColor: '#fff',
@@ -1016,5 +1113,124 @@ const styles = StyleSheet.create({
   comingSoonText: {
     fontSize: 16,
     color: '#9CA3AF',
+  },
+
+  earningHeader: {
+    padding: 20,
+  },
+  earningTitle: {
+    fontSize: 14,
+    color: '#2E2F33E0',
+    marginBottom: 4,
+  },
+  earningTotal: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#171719',
+  },
+  earningSummaryCard: {
+    backgroundColor: '#F7F7F8',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#37383C9C',
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#171719',
+  },
+
+  linkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  linkText: {
+    fontSize: 16,
+    color: '#171719',
+  },
+  dividerWrapper: {
+    marginTop: 20,
+    marginBottom: 20,
+    color: '#70737C38',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  earningListTitle: {
+    paddingHorizontal: 20,
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#171719',
+  },
+  earningListSection: {
+    padding: 20,
+  },
+  earningMonthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 20,
+  },
+  monthCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  earningMonthText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#171719',
+  },
+  earningCard: {
+    borderWidth: 1,
+    borderColor: '#70737C29',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+  },
+  earningCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  noticeText: {
+    fontSize: 14,
+    color: '#2E2F33E0',
+  },
+  periodText: {
+    fontSize: 14,
+    color: '#2E2F33E0',
+  },
+  earningCardBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  patientText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#171719',
+  },
+  amountText: {
+    fontSize: 17,
+    fontWeight: '500',
+    color: '#0066FF',
   },
 });

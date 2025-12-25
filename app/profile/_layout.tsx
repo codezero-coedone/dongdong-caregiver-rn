@@ -21,7 +21,7 @@ export default function ProfileLayout() {
       <Stack.Screen
         name="introduction"
         options={{
-          title: '자기 소개',
+          headerShown: false,
         }}
       />
     </Stack>

@@ -1,213 +1,288 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  DimensionValue,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useJournalStore, type ActivityRecord } from '../../store/journalStore';
 
-type StatusType = 'caution' | 'good';
+/* =========================
+   타입
+========================= */
+type StatusType = 'caution' | 'normal' | 'good';
 
-const StatusButton = ({
-    label,
-    selected,
-    onPress,
+const STATUS_OPTIONS: { label: string; value: StatusType }[] = [
+  { label: '주의', value: 'caution' },
+  { label: '보통', value: 'normal' },
+  { label: '양호', value: 'good' },
+];
+
+/* =========================
+   공통 세그먼트 컴포넌트
+========================= */
+const SegmentedControl = ({
+  value,
+  onChange,
 }: {
-    label: string;
-    selected: boolean;
-    onPress: () => void;
-}) => (
-    <TouchableOpacity
+  value: StatusType;
+  onChange: (v: StatusType) => void;
+}) => {
+  const selectedIndex = STATUS_OPTIONS.findIndex((opt) => opt.value === value);
+
+  const segmentWidth = `${100 / STATUS_OPTIONS.length}%` as DimensionValue;
+  const segmentLeft = `${
+    (100 / STATUS_OPTIONS.length) * selectedIndex
+  }%` as DimensionValue;
+
+  return (
+    <View style={styles.segmentWrapper}>
+      <View
+        pointerEvents="none"
         style={[
-            styles.statusButton,
-            selected && (label === '주의' ? styles.cautionSelected : styles.goodSelected),
+          styles.segmentActive,
+          {
+            width: segmentWidth,
+            left: segmentLeft,
+            borderTopLeftRadius: selectedIndex === 0 ? 12 : 0,
+            borderBottomLeftRadius: selectedIndex === 0 ? 12 : 0,
+            borderTopRightRadius:
+              selectedIndex === STATUS_OPTIONS.length - 1 ? 12 : 0,
+            borderBottomRightRadius:
+              selectedIndex === STATUS_OPTIONS.length - 1 ? 12 : 0,
+          },
         ]}
-        onPress={onPress}
-    >
-        <Text style={[styles.statusButtonText, selected && styles.statusButtonTextSelected]}>
-            {label}
-        </Text>
-    </TouchableOpacity>
-);
+      />
 
+      {/* 버튼 */}
+      {STATUS_OPTIONS.map((opt, index) => (
+        <TouchableOpacity
+          key={opt.value}
+          style={styles.segmentItem}
+          onPress={() => onChange(opt.value)}
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[
+              styles.segmentText,
+              value === opt.value && styles.segmentTextSelected,
+            ]}
+          >
+            {opt.label}
+          </Text>
+
+          {/* divider */}
+          {index !== STATUS_OPTIONS.length - 1 && (
+            <View style={styles.segmentDivider} />
+          )}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+
+/* =========================
+   화면
+========================= */
 export default function ActivityRecordScreen() {
-    const router = useRouter();
-    const { currentPatient, selectedDate, saveActivityRecord, entries } = useJournalStore();
+  const router = useRouter();
+  const { currentPatient, selectedDate, saveActivityRecord, entries } =
+    useJournalStore();
 
-    // Get existing data if any
-    const existingEntry = entries.find(
-        (e) => e.date === selectedDate && e.patientId === currentPatient?.id
-    );
-    const existingRecord = existingEntry?.activityRecord;
+  const existingEntry = entries.find(
+    (e) => e.date === selectedDate && e.patientId === currentPatient?.id,
+  );
+  const existingRecord = existingEntry?.activityRecord;
 
-    // Form state
-    const [exercise, setExercise] = useState<StatusType>(existingRecord?.exercise || 'good');
-    const [sleep, setSleep] = useState<StatusType>(existingRecord?.sleep || 'good');
-    const [otherNotes, setOtherNotes] = useState(existingRecord?.otherNotes || '');
+  const [exercise, setExercise] = useState<StatusType>(
+    existingRecord?.exercise ?? 'caution',
+  );
+  const [sleep, setSleep] = useState<StatusType>(
+    existingRecord?.sleep ?? 'caution',
+  );
+  const [otherNotes, setOtherNotes] = useState(
+    existingRecord?.otherNotes || '',
+  );
 
-    const handleSave = () => {
-        if (!currentPatient) {
-            Alert.alert('알림', '환자 정보가 없습니다.');
-            return;
-        }
+  const handleSave = () => {
+    if (!currentPatient) {
+      Alert.alert('알림', '환자 정보가 없습니다.');
+      return;
+    }
 
-        const record: ActivityRecord = {
-            exercise,
-            sleep,
-            otherNotes: otherNotes || undefined,
-        };
-
-        saveActivityRecord(selectedDate, currentPatient.id, record);
-        Alert.alert('저장 완료', '활동 기록이 저장되었습니다.', [
-            { text: '확인', onPress: () => router.back() }
-        ]);
+    const record: ActivityRecord = {
+      exercise,
+      sleep,
+      otherNotes: otherNotes || undefined,
     };
 
-    return (
-        <SafeAreaView style={styles.container} edges={['bottom']}>
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                <Text style={styles.sectionTitle}>활동 기록</Text>
+    saveActivityRecord(selectedDate, currentPatient.id, record);
+    Alert.alert('저장 완료', '활동 기록이 저장되었습니다.', [
+      { text: '확인', onPress: () => router.back() },
+    ]);
+  };
 
-                {/* Exercise */}
-                <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>운동</Text>
-                    <View style={styles.statusRow}>
-                        <StatusButton
-                            label="주의"
-                            selected={exercise === 'caution'}
-                            onPress={() => setExercise('caution')}
-                        />
-                        <StatusButton
-                            label="양호"
-                            selected={exercise === 'good'}
-                            onPress={() => setExercise('good')}
-                        />
-                    </View>
-                </View>
+  return (
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.sectionTitle}>활동 기록</Text>
 
-                {/* Sleep */}
-                <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>수면</Text>
-                    <View style={styles.statusRow}>
-                        <StatusButton
-                            label="주의"
-                            selected={sleep === 'caution'}
-                            onPress={() => setSleep('caution')}
-                        />
-                        <StatusButton
-                            label="양호"
-                            selected={sleep === 'good'}
-                            onPress={() => setSleep('good')}
-                        />
-                    </View>
-                </View>
+        {/* 운동 */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>운동</Text>
+          <SegmentedControl value={exercise} onChange={setExercise} />
+        </View>
 
-                {/* Other Notes */}
-                <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>기타 활동</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="기타 활동 관련 사항을 입력해주세요"
-                        placeholderTextColor="#9CA3AF"
-                        multiline
-                        value={otherNotes}
-                        onChangeText={setOtherNotes}
-                    />
-                </View>
+        {/* 수면 */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>수면</Text>
+          <SegmentedControl value={sleep} onChange={setSleep} />
+        </View>
 
-                <View style={{ height: 100 }} />
-            </ScrollView>
+        {/* 기타 사항 */}
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>기타 사항</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="전달사항 혹은 기타 특이 사항을 작성해주세요."
+            placeholderTextColor="#9CA3AF"
+            multiline
+            value={otherNotes}
+            onChangeText={setOtherNotes}
+          />
+          <Text style={styles.counter}>{otherNotes.length}/500</Text>
+        </View>
 
-            {/* Save Button */}
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                    <Text style={styles.saveButtonText}>저장하기</Text>
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
-    );
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {/* 저장 버튼 */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>저장하기</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
 }
 
+/* =========================
+   스타일
+========================= */
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F9FAFB',
-    },
-    content: {
-        flex: 1,
-        padding: 16,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#111827',
-        marginBottom: 24,
-    },
-    field: {
-        marginBottom: 24,
-    },
-    fieldLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#374151',
-        marginBottom: 8,
-    },
-    statusRow: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    statusButton: {
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-    },
-    cautionSelected: {
-        backgroundColor: '#FEE2E2',
-        borderColor: '#DC2626',
-    },
-    goodSelected: {
-        backgroundColor: '#DCFCE7',
-        borderColor: '#16A34A',
-    },
-    statusButtonText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#6B7280',
-    },
-    statusButtonTextSelected: {
-        color: '#111827',
-    },
-    input: {
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 8,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        fontSize: 14,
-        color: '#374151',
-    },
-    textArea: {
-        minHeight: 120,
-        textAlignVertical: 'top',
-    },
-    footer: {
-        padding: 16,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    saveButton: {
-        backgroundColor: '#3B82F6',
-        paddingVertical: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    saveButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#fff',
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFF',
+  },
+  content: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 20,
+  },
+  field: {
+    marginBottom: 28,
+  },
+  fieldLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+
+  /* ===== 세그먼트 ===== */
+  segmentWrapper: {
+    flexDirection: 'row',
+    position: 'relative',
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+
+  segmentActive: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 2,
+    borderColor: '#7AA2F7',
+  },
+
+  segmentItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+
+  segmentText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8B8B8B',
+  },
+
+  segmentTextSelected: {
+    color: '#2563EB',
+  },
+
+  segmentDivider: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: '#E5E7EB',
+  },
+
+  /* ===== 입력 ===== */
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#111827',
+  },
+  textArea: {
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  counter: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#9CA3AF',
+  },
+
+  /* ===== 하단 ===== */
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    backgroundColor: '#fff',
+  },
+  saveButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#fff',
+  },
 });
