@@ -316,7 +316,7 @@ export default function CaregiverInfoScreen() {
       </ScrollView>
 
       {/* Submit Button */}
-      <View className="p-6 border-t border-gray-100">
+      <View className="p-6">
         <Button title="다음" onPress={handleSubmit(onSubmit)} />
       </View>
     </SafeAreaView>

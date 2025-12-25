@@ -1,5 +1,14 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from '@react-navigation/native';
+import {
+  Stack,
+  useRootNavigationState,
+  useRouter,
+  useSegments,
+} from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import '../global.css'; // Import global CSS for NativeWind
@@ -32,7 +41,11 @@ export default function RootLayout() {
     } else if (isLoggedIn && !isSignupComplete && !inSignupGroup) {
       // Redirect to signup info if logged in but signup not complete
       setTimeout(() => router.replace('/signup/info'), 0);
-    } else if (isLoggedIn && isSignupComplete && (inAuthGroup || inSignupGroup)) {
+    } else if (
+      isLoggedIn &&
+      isSignupComplete &&
+      (inAuthGroup || inSignupGroup)
+    ) {
       // Redirect to home if logged in and signup complete, but still in auth screens
       setTimeout(() => router.replace('/'), 0);
     }
@@ -52,7 +65,10 @@ export default function RootLayout() {
           <Stack.Screen name="profile" options={{ headerShown: false }} />
           <Stack.Screen name="care-history" options={{ headerShown: false }} />
           <Stack.Screen name="job" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen
+            name="modal"
+            options={{ presentation: 'modal', title: 'Modal' }}
+          />
           <Stack.Screen name="permission" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
@@ -60,4 +76,3 @@ export default function RootLayout() {
     </QueryProvider>
   );
 }
-

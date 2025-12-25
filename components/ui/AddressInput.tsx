@@ -31,7 +31,7 @@ export default function AddressInput({
           paddingHorizontal: 12,
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: 'rgba(112,115,124,0.16)',
+          borderColor: '#70737C29',
           backgroundColor: '#FFFFFF',
           marginBottom: 8,
         }}
@@ -62,12 +62,13 @@ export default function AddressInput({
         <TextInput
           style={{
             height: 48,
-            paddingHorizontal: 12,
+            paddingHorizontal: 16,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: 'rgba(112,115,124,0.16)',
+            borderColor: '#70737C29',
             backgroundColor: '#FFFFFF',
             marginBottom: 8,
+            fontSize: 16,
           }}
           placeholder={detailPlaceholder}
           placeholderTextColor="rgba(55,56,60,0.28)"

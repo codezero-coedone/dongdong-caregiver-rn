@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(112,115,124,0.22)',
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 30,
   },
 
   tab: {
