@@ -155,6 +155,26 @@ export default function MyScreen() {
       ));
   };
 
+  function ReferralBanner() {
+    return (
+      <View style={styles.referralWrapper}>
+        <View style={styles.referralBanner}>
+          <View style={styles.referralTitleRow}>
+            <Ionicons name="people" size={22} color="#2563EB" />
+            <Text style={styles.referralTitle}>
+              친구 초대하고 10,000원 받기!
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.referralCodeButton}>
+            <Ionicons name="ticket-outline" size={20} color="#fff" />
+            <Text style={styles.referralCodeText}>추천인 코드</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -238,6 +258,9 @@ export default function MyScreen() {
               </View>
             </View>
           </View>
+
+          {/* ⭐ 추천인 배너 (여기 추가) */}
+          <ReferralBanner />
 
           {/* 진행 중인 간병 */}
           <View style={styles.section}>
@@ -1232,5 +1255,47 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '500',
     color: '#0066FF',
+  },
+  referralWrapper: {
+    marginBottom: 8,
+  },
+
+  referralBanner: {
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    backgroundColor: '#0066FF1A',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+
+  referralTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+
+  referralTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#0054D1',
+  },
+
+  referralCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0066FF',
+    borderRadius: 12,
+    paddingVertical: 16,
+    justifyContent: 'center',
+    width: '100%',
+  },
+
+  referralCodeText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
