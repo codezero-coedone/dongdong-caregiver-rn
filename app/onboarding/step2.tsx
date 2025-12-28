@@ -1,37 +1,118 @@
+import Button from '@/components/ui/Button';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Text, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Button from '../../components/ui/Button';
-import Header from '../../components/ui/Header';
-import LanguageSelector from '../../components/ui/LanguageSelector';
-import { useTranslation } from '../../i18n';
 
-export default function OnboardingStep2() {
-    const router = useRouter();
-    const { t } = useTranslation();
+export default function Index() {
+  const router = useRouter();
 
-    return (
-        <SafeAreaView className="flex-1 bg-white">
-            <View className="flex-1 px-6 pt-10">
-                <Header title={t('login')} rightElement={<LanguageSelector />} />
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>로그인</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
-                <Text className="text-2xl font-bold text-center mb-4">
-                    {t('onboarding2_title')}
-                </Text>
-                <Text className="text-base text-gray-500 text-center mb-10 leading-6">
-                    {t('onboarding2_desc')}
-                </Text>
+      {/* 본문 */}
+      <View style={styles.content}>
+        {/* 타이틀 */}
+        <Text style={styles.title}>실시간 확인으로 안심</Text>
 
-                <View className="w-full h-64 bg-gray-200 rounded-lg mb-auto" />
+        {/* 설명 */}
+        <Text style={styles.description}>
+          현재 돌봄 상황을 언제든 확인하세요.{'\n'}
+          간병 진행 현황, 간병일지, 주요 알림까지 실시간으로 공유되어 멀리
+          있어도 안심할 수 있어요.
+        </Text>
 
-                <View className="mb-10">
-                    <Button
-                        title={t('next')}
-                        onPress={() => router.push('/onboarding/step3')}
-                    />
-                </View>
-            </View>
-        </SafeAreaView>
-    );
+        {/* 이미지 */}
+        <View style={styles.imageWrapper}>
+          <Image
+            source={require('@/assets/images/onboarding-2.png')}
+            style={styles.image}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View style={{ flex: 1 }} />
+
+        {/* 버튼 */}
+        <View style={styles.buttonWrapper}>
+          <Button
+            title="다음"
+            onPress={() => router.push('/onboarding/step3')}
+          />
+        </View>
+      </View>
+    </SafeAreaView>
+  );
 }
+
+const styles = StyleSheet.create({
+  /* ===== Layout ===== */
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+
+  /* ===== Header ===== */
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#70737C29',
+    backgroundColor: '#fff',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000000',
+  },
+
+  /* ===== Content ===== */
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+
+  title: {
+    marginTop: 60,
+    fontSize: 22,
+    fontWeight: '600',
+    lineHeight: 32,
+    textAlign: 'center',
+    color: '#171719',
+  },
+
+  description: {
+    marginTop: 42,
+    maxWidth: 335,
+    fontSize: 17,
+    fontWeight: '500',
+    lineHeight: 24,
+    textAlign: 'center',
+    color: '#171719',
+  },
+
+  imageWrapper: {
+    marginTop: 80,
+    justifyContent: 'center',
+  },
+  image: {
+    width: 130,
+    height: 120,
+  },
+
+  buttonWrapper: {
+    width: '100%',
+  },
+});

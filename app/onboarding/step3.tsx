@@ -1,131 +1,165 @@
+import Button from '@/components/ui/Button';
+import { loginWithSocial } from '@/services/authService';
 import { Ionicons } from '@expo/vector-icons';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { makeRedirectUri, ResponseType, useAuthRequest } from 'expo-auth-session';
+import KakaoLogin from '@react-native-seoul/kakao-login';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import React, { useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import React from 'react';
+import {
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import LoginFailModal from '../../components/auth/LoginFailModal';
-import Button from '../../components/ui/Button';
-import Header from '../../components/ui/Header';
-import LanguageSelector from '../../components/ui/LanguageSelector';
-import { useTranslation } from '../../i18n';
-import { useAuthStore } from '../../store/authStore';
+export default function Step3() {
+  const router = useRouter();
 
-WebBrowser.maybeCompleteAuthSession();
+  /**
+   * ✅ 카카오 SDK 로그인
+   */
+  const handleKakaoLogin = async () => {
+    try {
+      const token = await KakaoLogin.login();
 
-// Kakao Endpoint
-const discovery = {
-    authorizationEndpoint: 'https://kauth.kakao.com/oauth/authorize',
-    tokenEndpoint: 'https://kauth.kakao.com/oauth/token',
-};
+      /**
+       * token.accessToken ← 이게 핵심
+       */
+      await loginWithSocial({
+        provider: 'KAKAO',
+        accessToken: token.accessToken,
+      });
 
-export default function OnboardingStep3() {
-    const router = useRouter();
-    const { login, setError, error } = useAuthStore();
-    const { t } = useTranslation();
-    const [modalVisible, setModalVisible] = useState(false);
+      router.replace('/(tabs)');
+    } catch (e) {
+      console.error('Kakao login error', e);
+    }
+  };
 
-    // Kakao Auth Request
-    // REPLACE 'YOUR_KAKAO_REST_API_KEY' with actual key if available, or use a placeholder
-    const [request, response, promptAsync] = useAuthRequest(
-        {
-            clientId: 'YOUR_KAKAO_REST_API_KEY', // TODO: User needs to provide this
-            scopes: ['profile_nickname', 'profile_image'],
-            redirectUri: makeRedirectUri({
-                scheme: 'your.app.scheme' // TODO: Configure scheme in app.json
-            }),
-            responseType: ResponseType.Code,
-        },
-        discovery
-    );
+  /**
+   * ✅ 애플 로그인 (지금 구조 그대로 OK)
+   */
+  const handleAppleLogin = async () => {
+    // const credential = await AppleAuthentication.signInAsync({
+    //   requestedScopes: [
+    //     AppleAuthentication.AppleAuthenticationScope.EMAIL,
+    //     AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+    //   ],
+    // });
+    // if (!credential.identityToken) {
+    //   throw new Error('Apple identityToken 없음');
+    // }
+    // await loginWithSocial({
+    //   provider: 'APPLE',
+    //   accessToken: credential.identityToken,
+    //   email: credential.email ?? undefined,
+    //   name: credential.fullName?.givenName ?? undefined,
+    // });
+    // router.replace('/(tabs)');
+  };
 
-    useEffect(() => {
-        if (response?.type === 'success') {
-            const { code } = response.params;
-            // Here you would normally exchange code for token
-            // Here you would normally exchange code for token
-            console.log('Kakao Auth Code:', code);
-            login('kakao');
-            // Redirection to /signup/info handled by _layout because isSignupComplete is false
-        } else if (response?.type === 'error') {
-            setError(t('kakao_login_failed'));
-            setModalVisible(true);
-        }
-    }, [response]);
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>로그인</Text>
+        <View style={{ width: 24 }} />
+      </View>
 
-    const handleAppleLogin = async () => {
-        try {
-            const credential = await AppleAuthentication.signInAsync({
-                requestedScopes: [
-                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
-                ],
-            });
-            // signed in
-            console.log('Apple Credential:', credential);
-            login('apple');
-        } catch (e: any) {
-            if (e.code === 'ERR_REQUEST_CANCELED') {
-                // handle that the user canceled the sign-in flow
-            } else {
-                setError(t('apple_login_failed'));
-                setModalVisible(true);
+      {/* 본문 */}
+      <View style={styles.content}>
+        <Text style={styles.title}>맞춤 돌봄 서비스 이용</Text>
+
+        <Text style={styles.description}>
+          간병 매칭부터 관리까지 한 곳에서 해결{'\n'}
+          보호자·환자 모두에게 편리한 통합 돌봄 서비스 제공
+        </Text>
+
+        <View style={styles.imageWrapper}>
+          <Image
+            source={require('@/assets/images/onboarding-3.png')}
+            style={styles.image}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View style={{ flex: 1 }} />
+
+        <View style={{ width: '100%', gap: 12, paddingBottom: 24 }}>
+          <Button
+            title="카카오 시작하기"
+            variant="kakao"
+            icon={
+              <Image
+                source={require('@/assets/images/icons/kakao.png')}
+                style={{ width: 18, height: 24 }}
+              />
             }
-        }
-    };
+            onPress={handleKakaoLogin}
+          />
 
-    const handleKakaoLogin = () => {
-        // For demo purposes, if no client ID, just mock success or fail
-        // promptAsync(); 
-
-        // MOCKING for now since we don't have API Key
-        // To test failure, uncomment the next line:
-        // setError('카카오 로그인 실패 테스트'); setModalVisible(true); return;
-
-        login('kakao');
-        // Redirection handled by _layout
-    };
-
-    return (
-        <SafeAreaView className="flex-1 bg-white">
-            <View className="flex-1 px-6 pt-10">
-                <Header title={t('login')} rightElement={<LanguageSelector />} />
-
-                <Text className="text-2xl font-bold text-center mb-4">
-                    {t('onboarding3_title')}
-                </Text>
-                <Text className="text-base text-gray-500 text-center mb-10 leading-6">
-                    {t('onboarding3_desc')}
-                </Text>
-
-                <View className="w-full h-64 bg-gray-200 rounded-lg mb-auto" />
-
-                <View className="mb-6 gap-3">
-                    <Button
-                        title={t('kakao_login')}
-                        variant="kakao"
-                        onPress={handleKakaoLogin}
-                        icon={<Ionicons name="chatbubble-sharp" size={20} color="black" />}
-                    />
-                    {Platform.OS === 'ios' && (
-                        <Button
-                            title={t('apple_login')}
-                            variant="apple"
-                            onPress={handleAppleLogin}
-                            icon={<Ionicons name="logo-apple" size={20} color="white" />}
-                        />
-                    )}
-                </View>
-
-                <LoginFailModal
-                    visible={modalVisible}
-                    onClose={() => setModalVisible(false)}
-                    message={error || t('login_failed')}
-                />
-            </View>
-        </SafeAreaView>
-    );
+          {Platform.OS === 'ios' && (
+            <Button
+              title="애플 시작하기"
+              variant="apple"
+              icon={<Ionicons name="logo-apple" size={18} color="#fff" />}
+              onPress={handleAppleLogin}
+            />
+          )}
+        </View>
+      </View>
+    </SafeAreaView>
+  );
 }
+
+/* ===== styles ===== */
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#70737C29',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  title: {
+    marginTop: 60,
+    fontSize: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  description: {
+    marginTop: 42,
+    fontSize: 17,
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  imageWrapper: {
+    marginTop: 80,
+  },
+  image: {
+    width: 150,
+    height: 120,
+  },
+});

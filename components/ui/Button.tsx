@@ -39,7 +39,7 @@ const Button = ({
         break;
       case 'apple':
         bgClass = 'bg-apple';
-        textClass = 'text-white';
+        textClass = 'text-black';
         break;
       case 'outline':
         bgClass = 'bg-transparent';
