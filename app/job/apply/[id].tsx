@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiClient } from '@/services/apiClient';
 
 // Mock 지원 정보 데이터
 const MOCK_APPLICATION_DATA = {
@@ -41,10 +43,16 @@ export default function JobApplyScreen() {
 
   const handleApply = () => {
     if (!allAgreed) return;
-    // TODO: 지원하기 API 호출
-    console.log('Apply submitted for job:', id);
-    // 지원 완료 화면으로 이동
-    router.replace('/job/apply/complete');
+    (async () => {
+      try {
+        await apiClient.post(`/jobs/${id}/apply`, { message: null });
+        router.replace('/job/apply/complete');
+      } catch (e: any) {
+        const msg =
+          e?.response?.data?.message || e?.message || '지원하기에 실패했습니다.';
+        Alert.alert('오류', String(msg));
+      }
+    })();
   };
 
   const handleInsuranceLink = () => {

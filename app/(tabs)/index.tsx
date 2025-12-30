@@ -4,9 +4,10 @@ import Divider from '@/components/ui/Divider';
 import HeaderWithLogo from '@/components/ui/HeaderWithLogo';
 import Space from '@/components/ui/Space';
 import Typography from '@/components/ui/Typography';
+import { apiClient } from '@/services/apiClient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -68,6 +69,18 @@ const SORT_OPTIONS = [
   { label: '거리순', value: 'distance' },
   { label: '마감임박순', value: 'deadline' },
 ];
+
+type ApiJobListing = {
+  id: string;
+  careType: string;
+  locationSummary: string;
+  startDate: string;
+  endDate: string;
+  patientGender: string;
+  patientAge: number;
+  dailyRate: number;
+  createdAt: string;
+};
 
 interface JobCardProps {
   job: (typeof MOCK_JOBS)[0];
@@ -227,11 +240,48 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [sortOption, setSortOption] = useState('latest');
+  const [apiJobs, setApiJobs] = useState<ApiJobListing[] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await apiClient.get('/jobs');
+        if (!alive) return;
+        if (Array.isArray(res.data)) {
+          setApiJobs(res.data as ApiJobListing[]);
+        }
+      } catch {
+        if (!alive) return;
+        setApiJobs(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleApplyFilters = (filters: any) => {
     console.log('Applied filters:', filters);
     // TODO: 필터 적용 로직
   };
+
+  const jobsForUi =
+    apiJobs && apiJobs.length > 0
+      ? apiJobs.map((j: ApiJobListing) => ({
+          id: j.id,
+          type: j.careType,
+          timeAgo: '신규',
+          patientName: '환자',
+          patientAge: j.patientAge ?? 0,
+          patientGender: j.patientGender ?? '',
+          tags: [],
+          location: j.locationSummary ?? '',
+          period: `${j.startDate} ~ ${j.endDate}`,
+          hours: '',
+          pay: `일 ${Number(j.dailyRate ?? 0).toLocaleString()}원`,
+        }))
+      : MOCK_JOBS;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -284,7 +334,7 @@ export default function HomeScreen() {
         {/* Results Header */}
         <View style={styles.resultsHeader}>
           <Typography variant="label1.bold" color="label">
-            총 {MOCK_JOBS.length}건
+            총 {jobsForUi.length}건
           </Typography>
           <View style={styles.dropdownContainer}>
             <Dropdown
@@ -296,7 +346,7 @@ export default function HomeScreen() {
               labelField="label"
               valueField="value"
               value={sortOption}
-              onChange={(item) => setSortOption(item.value)}
+              onChange={(item: { value: string }) => setSortOption(item.value)}
               renderRightIcon={() => (
                 <Ionicons
                   name="caret-down"
@@ -311,7 +361,7 @@ export default function HomeScreen() {
 
         {/* Job List */}
         <View style={styles.jobList}>
-          {MOCK_JOBS.map((job) => (
+          {jobsForUi.map((job: (typeof MOCK_JOBS)[0]) => (
             <JobCard key={job.id} job={job} />
           ))}
         </View>

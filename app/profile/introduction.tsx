@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../../components/ui/Button';
+import { apiClient } from '@/services/apiClient';
 
 // 나만의 강점 옵션 (최대 3개)
 const STRENGTH_OPTIONS = [
@@ -102,15 +103,22 @@ export default function IntroductionEditScreen() {
   };
 
   const handleSubmit = () => {
-    console.log('Introduction saved:', {
-      introduction,
-      strengths: selectedStrengths,
-      careSkills: selectedCareSkills,
-    });
-
-    Alert.alert('완료', '자기소개가 등록되었습니다.', [
-      { text: '확인', onPress: () => router.back() },
-    ]);
+    (async () => {
+      try {
+        await apiClient.put('/caregivers/profile', {
+          introduction,
+        });
+        Alert.alert('완료', '자기소개가 등록되었습니다.', [
+          { text: '확인', onPress: () => router.back() },
+        ]);
+      } catch (e: any) {
+        const msg =
+          e?.response?.data?.message ||
+          e?.message ||
+          '자기소개 저장에 실패했습니다.';
+        Alert.alert('오류', String(msg));
+      }
+    })();
   };
 
   const isFormValid =
