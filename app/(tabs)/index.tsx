@@ -82,6 +82,7 @@ type ApiJobListing = {
   createdAt: string;
 };
 
+type UiJob = (typeof MOCK_JOBS)[0];
 interface JobCardProps {
   job: (typeof MOCK_JOBS)[0];
 }
@@ -240,20 +241,56 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [sortOption, setSortOption] = useState('latest');
-  const [apiJobs, setApiJobs] = useState<ApiJobListing[] | null>(null);
+  const [apiJobs, setApiJobs] = useState<ApiJobListing[]>([]);
+
+  const careTypeLabel = (v: string | null | undefined): string => {
+    switch (v) {
+      case 'HOSPITAL':
+        return '병원 간병';
+      case 'HOME':
+        return '가정 간병';
+      case 'NURSING_HOME':
+        return '요양원';
+      default:
+        return v ?? '-';
+    }
+  };
+
+  const formatYmd = (iso: string | null | undefined): string => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
+  };
+
+  const timeAgo = (iso: string | null | undefined): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const ms = d.getTime();
+    if (Number.isNaN(ms)) return '';
+    const diffSec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}분 전`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}시간 전`;
+    const diffD = Math.floor(diffH / 24);
+    return `${diffD}일 전`;
+  };
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
         const res = await apiClient.get('/jobs');
+        const data = (res.data as any)?.data;
         if (!alive) return;
-        if (Array.isArray(res.data)) {
-          setApiJobs(res.data as ApiJobListing[]);
-        }
+        setApiJobs(Array.isArray(data) ? (data as ApiJobListing[]) : []);
       } catch {
         if (!alive) return;
-        setApiJobs(null);
+        setApiJobs([]);
       }
     })();
     return () => {
@@ -266,22 +303,22 @@ export default function HomeScreen() {
     // TODO: 필터 적용 로직
   };
 
-  const jobsForUi =
-    apiJobs && apiJobs.length > 0
+  const jobsForUi: UiJob[] =
+    apiJobs.length > 0
       ? apiJobs.map((j: ApiJobListing) => ({
           id: j.id,
-          type: j.careType,
-          timeAgo: '신규',
+          type: careTypeLabel(j.careType),
+          timeAgo: timeAgo(j.createdAt) || '신규',
           patientName: '환자',
           patientAge: j.patientAge ?? 0,
           patientGender: j.patientGender ?? '',
           tags: [],
           location: j.locationSummary ?? '',
-          period: `${j.startDate} ~ ${j.endDate}`,
+          period: `${formatYmd(j.startDate)} ~ ${formatYmd(j.endDate)}`,
           hours: '',
           pay: `일 ${Number(j.dailyRate ?? 0).toLocaleString()}원`,
         }))
-      : MOCK_JOBS;
+      : [];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -361,9 +398,15 @@ export default function HomeScreen() {
 
         {/* Job List */}
         <View style={styles.jobList}>
-          {jobsForUi.map((job: (typeof MOCK_JOBS)[0]) => (
-            <JobCard key={job.id} job={job} />
-          ))}
+          {jobsForUi.length > 0 ? (
+            jobsForUi.map((job) => <JobCard key={job.id} job={job} />)
+          ) : (
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <Text style={{ color: '#6B7280' }}>
+                현재 지원 가능한 공고가 없습니다.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 

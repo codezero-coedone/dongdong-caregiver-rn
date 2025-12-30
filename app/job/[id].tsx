@@ -1,57 +1,77 @@
 import InfoBox from '@/components/ui/InfoBox';
-import PatientInfoCard from '@/components/ui/PatientInfoCard';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { apiClient } from '@/services/apiClient';
 
-// Mock 상세 데이터
-const MOCK_JOB_DETAIL = {
-    id: '1',
-    type: '기간제 간병',
-    // 간병 위치
-    location: {
-        name: '서울아산병원',
-        address: '서울 송파구 올림픽로 43길 88',
-        detailAddress: '매칭 후 공개',
-    },
-    // 간병 기간
-    schedule: {
-        startDate: '2025.11.15',
-        endDate: '2025.11.30',
-        workDays: '월, 화, 수',
-        workHours: '09:00 - 18:00 (하루 9시간)',
-    },
-    // 환자 정보
-    patient: {
-        matchCount: 2,
-        name: '이환자',
-        age: 68,
-        gender: '남',
-        height: '173cm',
-        weight: '60kg',
-        diagnosis: '폐렴',
-    },
-    // 입원 사유
-    admission: {
-        reason: '수술',
-        roomType: '일반실',
-    },
-    // 간병 요청사항 (가변적 - 배열 형태)
-    requirements: [
-        { label: '선호하는 간병인의 성별', value: '상관없음' },
-        { label: '기타 요청사항', value: '' },
-    ],
-    pay: '시급 15,000원',
+type ApiJobDetail = {
+    id: string;
+    careType: string;
+    locationSummary: string;
+    startDate: string;
+    endDate: string;
+    patientGender: string;
+    patientAge: number;
+    dailyRate: number;
+    createdAt: string;
+    location: string;
+    requirements?: string;
+    patientDiagnosis: string;
+    patientMobilityLevel: string;
+    guardianName: string;
 };
 
 export default function JobDetailScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
 
-    // TODO: id로 실제 데이터 fetch
-    const job = MOCK_JOB_DETAIL;
+    const [job, setJob] = useState<ApiJobDetail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const formatYmd = (iso: string | null | undefined): string => {
+        if (!iso) return '-';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return String(iso);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}.${m}.${day}`;
+    };
+
+    useEffect(() => {
+        let alive = true;
+        setLoading(true);
+        setError(null);
+        (async () => {
+            try {
+                const res = await apiClient.get(`/jobs/${id}`);
+                const data = (res.data as any)?.data as ApiJobDetail | undefined;
+                if (!alive) return;
+                if (!data) throw new Error('공고 데이터를 불러올 수 없습니다.');
+                setJob(data);
+            } catch (e: any) {
+                if (!alive) return;
+                setError(e?.response?.data?.message || e?.message || '조회에 실패했습니다.');
+                setJob(null);
+            } finally {
+                if (alive) setLoading(false);
+            }
+        })();
+        return () => {
+            alive = false;
+        };
+    }, [id]);
 
     const handleApply = () => {
         router.push(`/job/apply/${id}`);
@@ -79,6 +99,22 @@ export default function JobDetailScreen() {
             />
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                {loading && (
+                    <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                        <ActivityIndicator size="large" color="#3B82F6" />
+                    </View>
+                )}
+
+                {error && (
+                    <View style={{ paddingVertical: 20 }}>
+                        <Text style={{ color: '#EF4444', marginBottom: 8 }}>{String(error)}</Text>
+                        <TouchableOpacity onPress={() => router.replace(`/job/${id}`)}>
+                            <Text style={{ color: '#3B82F6' }}>다시 시도</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {!loading && !error && job && (
                 {/* 간병 위치 */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
@@ -94,7 +130,7 @@ export default function JobDetailScreen() {
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>간병 장소</Text>
-                        <InfoBox value={`${job.location.name}(${job.location.address})`} />
+                        <InfoBox value={job.location || '-'} />
                     </View>
 
                     <View style={styles.fieldGroup}>
@@ -112,17 +148,17 @@ export default function JobDetailScreen() {
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>기간</Text>
-                        <InfoBox value={`${job.schedule.startDate} - ${job.schedule.endDate}`} />
+                        <InfoBox value={`${formatYmd(job.startDate)} - ${formatYmd(job.endDate)}`} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>근무 요일</Text>
-                        <InfoBox value={job.schedule.workDays} />
+                        <InfoBox value={'미정'} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>근무 시간</Text>
-                        <InfoBox value={job.schedule.workHours} />
+                        <InfoBox value={'미정'} />
                     </View>
                 </View>
 
@@ -133,7 +169,20 @@ export default function JobDetailScreen() {
                         <Text style={styles.sectionTitle}>환자 정보</Text>
                     </View>
 
-                    <PatientInfoCard patient={job.patient} isMatched={true} />
+                    <View style={{ gap: 12 }}>
+                        <View style={styles.fieldGroup}>
+                            <Text style={styles.fieldLabel}>성별/나이</Text>
+                            <InfoBox value={`${job.patientGender || '-'} / ${job.patientAge ?? 0}세`} />
+                        </View>
+                        <View style={styles.fieldGroup}>
+                            <Text style={styles.fieldLabel}>진단명</Text>
+                            <InfoBox value={job.patientDiagnosis || '-'} />
+                        </View>
+                        <View style={styles.fieldGroup}>
+                            <Text style={styles.fieldLabel}>거동상태</Text>
+                            <InfoBox value={job.patientMobilityLevel || '-'} />
+                        </View>
+                    </View>
                 </View>
 
                 {/* 입원 사유 */}
@@ -145,12 +194,12 @@ export default function JobDetailScreen() {
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>입원 사유</Text>
-                        <InfoBox value={job.admission.reason} />
+                        <InfoBox value={'-'} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>병실 종류</Text>
-                        <InfoBox value={job.admission.roomType} />
+                        <InfoBox value={'-'} />
                     </View>
                 </View>
 
@@ -161,15 +210,18 @@ export default function JobDetailScreen() {
                         <Text style={styles.sectionTitle}>간병 요청사항</Text>
                     </View>
 
-                    {job.requirements.map((req, index) => (
-                        <View key={index} style={styles.fieldGroup}>
-                            <Text style={styles.fieldLabel}>{req.label}</Text>
-                            <InfoBox value={req.value || '비어있음'} />
-                        </View>
-                    ))}
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.fieldLabel}>요청 사항</Text>
+                        <InfoBox value={job.requirements || '없음'} />
+                    </View>
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.fieldLabel}>일당</Text>
+                        <InfoBox value={`${Number(job.dailyRate ?? 0).toLocaleString()}원`} />
+                    </View>
                 </View>
 
                 <View style={{ height: 100 }} />
+                )}
             </ScrollView>
 
             {/* 하단 버튼 */}

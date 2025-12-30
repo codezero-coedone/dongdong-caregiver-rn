@@ -14,24 +14,55 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiClient } from '@/services/apiClient';
 
-// Mock 지원 정보 데이터
-const MOCK_APPLICATION_DATA = {
-  patient: {
-    name: '이환자',
-    age: 68,
-    gender: '남',
-  },
-  tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
-  location: '서울특별시 강남구 삼성동',
-  period: '2025.11.15~11.30',
-  totalHours: '135시간 (하루 9시간)',
-  hourlyPay: '15,000원',
-  totalPay: '2,025,000원',
+type ApiJobDetail = {
+  id: string;
+  careType: string;
+  locationSummary: string;
+  startDate: string;
+  endDate: string;
+  patientGender: string;
+  patientAge: number;
+  dailyRate: number;
+  createdAt: string;
+  location: string;
+  requirements?: string;
+  patientDiagnosis: string;
+  patientMobilityLevel: string;
+  guardianName: string;
 };
 
 export default function JobApplyScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [job, setJob] = useState<ApiJobDetail | null>(null);
+
+  const formatYmd = (iso: string | null | undefined): string => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
+  };
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await apiClient.get(`/jobs/${id}`);
+        const data = (res.data as any)?.data as ApiJobDetail | undefined;
+        if (!alive) return;
+        setJob(data ?? null);
+      } catch {
+        if (!alive) return;
+        setJob(null);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id]);
 
   // 약관 동의 상태
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
@@ -81,40 +112,43 @@ export default function JobApplyScreen() {
           <View style={styles.infoCard}>
             {/* 환자 정보 */}
             <Text style={styles.patientName}>
-              {MOCK_APPLICATION_DATA.patient.name} (
-              {MOCK_APPLICATION_DATA.patient.age}세,{' '}
-              {MOCK_APPLICATION_DATA.patient.gender})
+              {job
+                ? `환자 (${job.patientAge ?? 0}세, ${job.patientGender ?? '-'})`
+                : '환자'}
             </Text>
 
-            {/* 태그 */}
-            <View style={styles.tags}>
-              {MOCK_APPLICATION_DATA.tags.map((tag, index) => (
-                <Chip
-                  key={index}
-                  label={tag}
-                  variant={index === 0 ? 'primary' : 'default'}
-                />
-              ))}
-            </View>
+            {/* 태그(진단/거동) */}
+            {job && (
+              <View style={styles.tags}>
+                {!!job.patientDiagnosis && (
+                  <Chip label={job.patientDiagnosis} variant="primary" />
+                )}
+                {!!job.patientMobilityLevel && (
+                  <Chip label={job.patientMobilityLevel} variant="default" />
+                )}
+              </View>
+            )}
 
             {/* 상세 정보 */}
             <View style={styles.infoRows}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>위치</Text>
                 <Text style={styles.infoValue}>
-                  {MOCK_APPLICATION_DATA.location}
+                  {job?.location ?? '-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>기간</Text>
                 <Text style={styles.infoValue}>
-                  {MOCK_APPLICATION_DATA.period}
+                  {job
+                    ? `${formatYmd(job.startDate)}~${formatYmd(job.endDate)}`
+                    : '-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>총 근무 시간</Text>
                 <Text style={styles.infoValue}>
-                  {MOCK_APPLICATION_DATA.totalHours}
+                  {'미정'}
                 </Text>
               </View>
             </View>
@@ -126,13 +160,13 @@ export default function JobApplyScreen() {
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>시급</Text>
                 <Text style={styles.infoValue}>
-                  {MOCK_APPLICATION_DATA.hourlyPay}
+                  {'-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>총 급여</Text>
                 <Text style={styles.totalPayValue}>
-                  {MOCK_APPLICATION_DATA.totalPay}
+                  {job ? `${Number(job.dailyRate ?? 0).toLocaleString()}원` : '-'}
                 </Text>
               </View>
             </View>
