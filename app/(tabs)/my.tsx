@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,8 +9,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import JournalCard from '../../components/caregiving-journal/JournalCard';
-import { useJournalStore } from '../../store/journalStore';
+import apiClient from '@/services/apiClient';
+import CaregivingJournalHome from '../caregiving-journal';
 
 // Mock 사용자 데이터
 const MOCK_USER = {
@@ -104,43 +104,112 @@ const TABS = ['MY홈', '간병일지', '수익'];
 export default function MyScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('MY홈');
+  const [loadingMy, setLoadingMy] = useState(true);
+  const [myError, setMyError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [ongoingMatch, setOngoingMatch] = useState<any | null>(null);
+  const [reviewPreview, setReviewPreview] = useState<any[]>([]);
 
-  // Journal store
-  const { currentPatient, selectedDate, setSelectedDate, entries } =
-    useJournalStore();
-
-  // Get current journal entry
-  const currentEntry = entries.find(
-    (e) => e.date === selectedDate && e.patientId === currentPatient?.id,
-  );
-
-  // Special notes state
-  const [specialNotes, setSpecialNotes] = useState(
-    currentEntry?.specialNotes || '',
-  );
-
-  // Date navigation
-  const navigateDate = (direction: 'prev' | 'next') => {
-    const currentDate = new Date(selectedDate);
-    if (direction === 'prev') {
-      currentDate.setDate(currentDate.getDate() - 1);
-    } else {
-      currentDate.setDate(currentDate.getDate() + 1);
+  function unwrapData<T>(resData: unknown): T {
+    const anyRes = resData as any;
+    if (anyRes && typeof anyRes === 'object' && 'data' in anyRes) {
+      return anyRes.data as T;
     }
-    const newDate = `${currentDate.getFullYear()}-${String(
-      currentDate.getMonth() + 1,
-    ).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-    setSelectedDate(newDate);
-  };
+    return anyRes as T;
+  }
 
-  // Format date for display
-  const formatDisplayDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
-      2,
-      '0',
-    )}.${String(date.getDate()).padStart(2, '0')}`;
-  };
+  useEffect(() => {
+    let alive = true;
+    setLoadingMy(true);
+    setMyError(null);
+    (async () => {
+      try {
+        const profRes = await apiClient.get('/caregivers/profile');
+        const prof = unwrapData<any>((profRes as any)?.data);
+        if (!alive) return;
+        setProfile(prof ?? null);
+
+        const matchRes = await apiClient.get('/my/matches');
+        const matches = unwrapData<any[]>((matchRes as any)?.data);
+        const arr = Array.isArray(matches) ? matches : [];
+        const ongoing =
+          arr.find((m) => m?.status !== 'COMPLETED' && m?.status !== 'CANCELLED') ??
+          arr[0] ??
+          null;
+        setOngoingMatch(ongoing);
+
+        if (prof?.id) {
+          const reviewRes = await apiClient.get(`/reviews/caregiver/${prof.id}`);
+          const reviewData = unwrapData<any>((reviewRes as any)?.data);
+          const rows = Array.isArray(reviewData?.reviews) ? reviewData.reviews : [];
+          setReviewPreview(rows.slice(0, 3));
+        } else {
+          setReviewPreview([]);
+        }
+      } catch (e: any) {
+        if (!alive) return;
+        setMyError(
+          e?.response?.data?.message || e?.message || 'MY 데이터를 불러오지 못했습니다.',
+        );
+        setProfile(null);
+        setOngoingMatch(null);
+        setReviewPreview([]);
+      } finally {
+        if (alive) setLoadingMy(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const user = useMemo(() => {
+    if (!profile) return MOCK_USER;
+    const years = Number(profile.experienceYears ?? 0);
+    const exp = Number.isFinite(years) ? `경력 ${years}년` : MOCK_USER.experience;
+    const cert = profile.licenseType
+      ? profile.licenseType
+      : MOCK_USER.certificates;
+    return {
+      name: profile.name ?? MOCK_USER.name,
+      isVerified: Boolean(profile.isVerified),
+      rating: Number(profile.rating ?? MOCK_USER.rating),
+      experience: exp,
+      certificates: cert,
+      hasIntroduction: Boolean(profile.introduction),
+    };
+  }, [profile]);
+
+  const ongoingUi = useMemo(() => {
+    if (!ongoingMatch) return null;
+    const start = ongoingMatch.startDate ? new Date(ongoingMatch.startDate) : null;
+    const end = ongoingMatch.endDate ? new Date(ongoingMatch.endDate) : null;
+    const now = new Date();
+    const daysRemaining =
+      end && !Number.isNaN(end.getTime())
+        ? Math.max(
+            0,
+            Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+          )
+        : 0;
+    const period =
+      start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())
+        ? `${start.getFullYear()}.${String(start.getMonth() + 1).padStart(2, '0')}.${String(
+            start.getDate(),
+          ).padStart(2, '0')}~${String(end.getMonth() + 1).padStart(2, '0')}.${String(
+            end.getDate(),
+          ).padStart(2, '0')}`
+        : '-';
+    return {
+      matchId: ongoingMatch.id,
+      daysRemaining,
+      patientName: ongoingMatch.patientName ?? '환자',
+      tags: ongoingMatch.careType ? [String(ongoingMatch.careType)] : [],
+      period,
+      diagnosis: '-',
+    };
+  }, [ongoingMatch]);
 
   const renderStars = (rating: number) => {
     return Array(5)
@@ -223,8 +292,8 @@ export default function MyScreen() {
                 </View>
                 <View style={styles.profileInfo}>
                   <View style={styles.nameRow}>
-                    <Text style={styles.name}>{MOCK_USER.name}</Text>
-                    {MOCK_USER.isVerified && (
+                    <Text style={styles.name}>{user.name}</Text>
+                    {user.isVerified && (
                       <Ionicons
                         name="checkmark-circle"
                         size={16}
@@ -234,7 +303,7 @@ export default function MyScreen() {
                   </View>
                   <View style={styles.ratingRow}>
                     <Text style={styles.ratingLabel}>평점</Text>
-                    <Text style={styles.ratingValue}>{MOCK_USER.rating}</Text>
+                    <Text style={styles.ratingValue}>{user.rating}</Text>
                   </View>
                 </View>
               </View>
@@ -250,11 +319,11 @@ export default function MyScreen() {
             <View style={styles.profileDetails}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>근무 경력</Text>
-                <Text style={styles.detailValue}>{MOCK_USER.experience}</Text>
+                <Text style={styles.detailValue}>{user.experience}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>보유 자격증</Text>
-                <Text style={styles.detailValue}>{MOCK_USER.certificates}</Text>
+                <Text style={styles.detailValue}>{user.certificates}</Text>
               </View>
             </View>
           </View>
@@ -275,23 +344,21 @@ export default function MyScreen() {
               </TouchableOpacity>
             </View>
 
-            {MOCK_ONGOING_CARE ? (
+            {ongoingUi ? (
               <View style={styles.ongoingCareCard}>
                 {/* 남은 일수 */}
                 <Text style={styles.daysRemaining}>
-                  {MOCK_ONGOING_CARE.daysRemaining}일 남음
+                  {ongoingUi.daysRemaining}일 남음
                 </Text>
 
                 {/* 환자 정보 */}
                 <Text style={styles.ongoingPatientName}>
-                  {MOCK_ONGOING_CARE.patient.name} (
-                  {MOCK_ONGOING_CARE.patient.age}세,{' '}
-                  {MOCK_ONGOING_CARE.patient.gender})
+                  {ongoingUi.patientName}
                 </Text>
 
                 {/* 태그 */}
                 <View style={styles.ongoingTags}>
-                  {MOCK_ONGOING_CARE.tags.map((tag, index) => (
+                  {ongoingUi.tags.map((tag, index) => (
                     <View key={index} style={styles.ongoingTag}>
                       <Text style={styles.ongoingTagText}>{tag}</Text>
                     </View>
@@ -314,7 +381,7 @@ export default function MyScreen() {
 
                     {/* 오른쪽 값 */}
                     <Text style={styles.ongoingDetailValue}>
-                      {MOCK_ONGOING_CARE.period}
+                      {ongoingUi.period}
                     </Text>
                   </View>
 
@@ -329,7 +396,7 @@ export default function MyScreen() {
                       <Text style={styles.ongoingDetailLabel}>병명</Text>
                     </View>
                     <Text style={styles.ongoingDetailValue}>
-                      {MOCK_ONGOING_CARE.diagnosis}
+                      {ongoingUi.diagnosis}
                     </Text>
                   </View>
                 </View>
@@ -338,7 +405,13 @@ export default function MyScreen() {
                 <View style={styles.ongoingButtons}>
                   <TouchableOpacity
                     style={styles.writeJournalButton}
-                    onPress={() => setActiveTab('간병일지')}
+                    onPress={() =>
+                      ongoingUi.matchId
+                        ? router.push(
+                            `/caregiving-journal/new?matchId=${String(ongoingUi.matchId)}`,
+                          )
+                        : setActiveTab('간병일지')
+                    }
                   >
                     <Text style={styles.writeJournalButtonText}>
                       일지 작성하기
@@ -437,7 +510,7 @@ export default function MyScreen() {
             <View style={styles.sectionHeader}>
               <View style={styles.reviewTitleRow}>
                 <Text style={styles.sectionTitle}>나의 리뷰</Text>
-                <Text style={styles.reviewRating}>평점 {MOCK_USER.rating}</Text>
+                <Text style={styles.reviewRating}>평점 {user.rating}</Text>
               </View>
               <TouchableOpacity
                 style={styles.moreLink}
@@ -448,18 +521,38 @@ export default function MyScreen() {
               </TouchableOpacity>
             </View>
 
-            {MOCK_REVIEWS.map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewPatient}>{review.patientName}</Text>
-                  <View style={styles.reviewStars}>
-                    {renderStars(review.rating)}
-                  </View>
-                </View>
-                <Text style={styles.reviewPeriod}>기간 {review.period}</Text>
-                <Text style={styles.reviewContent}>{review.content}</Text>
+            {loadingMy ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>로딩 중…</Text>
               </View>
-            ))}
+            ) : myError ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>{String(myError)}</Text>
+              </View>
+            ) : reviewPreview.length > 0 ? (
+              reviewPreview.map((review) => (
+                <View key={String(review.id)} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <Text style={styles.reviewPatient}>리뷰</Text>
+                    <View style={styles.reviewStars}>
+                      {renderStars(Number(review.rating ?? 0))}
+                    </View>
+                  </View>
+                  <Text style={styles.reviewPeriod}>
+                    작성일 {String(review.createdAt || '').slice(0, 10)}
+                  </Text>
+                  <Text style={styles.reviewContent}>
+                    {review.content && String(review.content).trim()
+                      ? String(review.content)
+                      : '내용 없음'}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>아직 작성된 리뷰가 없습니다.</Text>
+              </View>
+            )}
           </View>
 
           <View style={{ height: 100 }} />
@@ -467,105 +560,7 @@ export default function MyScreen() {
       )}
 
       {/* 간병일지 Tab Content */}
-      {activeTab === '간병일지' && (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Patient Header */}
-          {currentPatient && (
-            <TouchableOpacity style={styles.patientHeader}>
-              <View style={styles.patientInfo}>
-                <Text style={styles.patientName}>
-                  {currentPatient.name} ({currentPatient.age}세,{' '}
-                  {currentPatient.gender})
-                </Text>
-                <View style={styles.patientTags}>
-                  {currentPatient.tags.map((tag, index) => (
-                    <View key={index} style={styles.patientTag}>
-                      <Text style={styles.patientTagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#3B82F6" />
-            </TouchableOpacity>
-          )}
-
-          {/* Date Navigation */}
-          <View style={styles.dateNavigation}>
-            <TouchableOpacity
-              onPress={() => navigateDate('prev')}
-              style={styles.dateArrow}
-            >
-              <Ionicons name="chevron-back" size={24} color="#374151" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateDisplay}>
-              <Text style={styles.dateText}>
-                {formatDisplayDate(selectedDate)}
-              </Text>
-              <Ionicons name="caret-down" size={14} color="#DC2626" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigateDate('next')}
-              style={styles.dateArrow}
-            >
-              <Ionicons name="chevron-forward" size={24} color="#374151" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Today's Journal Section */}
-          <View style={styles.journalSection}>
-            <Text style={styles.journalSectionTitle}>오늘의 일지</Text>
-
-            <JournalCard
-              type="morning"
-              data={currentEntry?.morning}
-              onPress={() =>
-                router.push('/caregiving-journal/meal-record?time=morning')
-              }
-            />
-            <JournalCard
-              type="lunch"
-              data={currentEntry?.lunch}
-              onPress={() =>
-                router.push('/caregiving-journal/meal-record?time=lunch')
-              }
-            />
-            <JournalCard
-              type="dinner"
-              data={currentEntry?.dinner}
-              onPress={() =>
-                router.push('/caregiving-journal/meal-record?time=dinner')
-              }
-            />
-            <JournalCard
-              type="medical"
-              data={currentEntry?.medicalRecord}
-              onPress={() => router.push('/caregiving-journal/medical-record')}
-            />
-            <JournalCard
-              type="activity"
-              data={currentEntry?.activityRecord}
-              onPress={() => router.push('/caregiving-journal/activity-record')}
-            />
-          </View>
-
-          {/* Special Notes Section */}
-          {/* <View style={styles.specialNotesSection}>
-            <Text style={styles.specialNotesTitle}>특이 및 전달 사항</Text>
-            <View style={styles.specialNotesBox}>
-              <TextInput
-                style={styles.specialNotesInput}
-                placeholder="특이 사항을 입력해주세요."
-                placeholderTextColor="#9CA3AF"
-                multiline
-                value={specialNotes}
-                onChangeText={setSpecialNotes}
-              />
-            </View>
-          </View> */}
-
-          <View style={{ height: 100 }} />
-        </ScrollView>
-      )}
+      {activeTab === '간병일지' && <CaregivingJournalHome />}
 
       {/* 수익 Tab Content */}
       {activeTab === '수익' && (
