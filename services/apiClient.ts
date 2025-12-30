@@ -1,8 +1,16 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { clearTokens, getAccessToken, getRefreshToken, isTokenExpired, saveTokens } from './tokenService';
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  isTokenExpired,
+  saveTokens,
+} from './tokenService';
 
-// Base API URL - change this to your actual API endpoint
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.example.com';
+// Default follows backend SSOT DEV base + prefix.
+// Override by setting EXPO_PUBLIC_API_URL (e.g. http://api.dongdong.io:3000/api/v1)
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'http://api.dongdong.io:3000/api/v1';
 
 // Create axios instance with default config
 export const apiClient = axios.create({
@@ -44,19 +52,25 @@ async function refreshAccessToken(): Promise<string | null> {
 
     try {
         // Make refresh request directly with axios to avoid interceptor loop
+        // Backend contract: POST /auth/refresh { refresh_token } -> { status, message, data: { access_token, refresh_token } }
         const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
+            refresh_token: refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken, expiresIn } = response.data;
+        const data = response.data?.data;
+        const access_token: string | undefined = data?.access_token;
+        const refresh_token: string | undefined = data?.refresh_token;
+
+        if (!access_token) {
+            throw new Error('Refresh response missing data.access_token');
+        }
 
         await saveTokens({
-            accessToken,
-            refreshToken: newRefreshToken || refreshToken,
-            expiresIn,
+            accessToken: access_token,
+            refreshToken: refresh_token || refreshToken,
         });
 
-        return accessToken;
+        return access_token;
     } catch (error) {
         console.error('[API] Token refresh failed:', error);
         await clearTokens();

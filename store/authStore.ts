@@ -63,16 +63,7 @@ export const useAuthStore = create<AuthState>()(
             loginType: null,
             error: null,
             signupInfo: null,
-            // TODO: 테스트용 초기값 - 배포 전 null로 변경 필요
-            caregiverInfo: {
-                name: '홍길동',
-                rrnFront: '800101',
-                rrnBack: '1234567',
-                phone: '01012345678',
-                address: '서울특별시 강남구 테헤란로 123',
-                addressDetail: '456호',
-                criminalRecordFile: null,
-            },
+            caregiverInfo: null,
             careerInfo: null,
             login: (type) => set({ isLoggedIn: true, isSignupComplete: false, loginType: type, error: null }),
             completeSignup: () => set({ isSignupComplete: true }),

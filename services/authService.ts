@@ -9,7 +9,8 @@ export async function loginWithSocial(params: {
   name?: string;
   email?: string;
 }) {
-  const res = await apiClient.post('/auth/login', params);
+  // Backend contract (SSOT): POST /api/v1/auth/social
+  const res = await apiClient.post('/auth/social', params);
 
   const { access_token, refresh_token } = res.data.data;
 

@@ -1,12 +1,14 @@
 import Button from '@/components/ui/Button';
 import ToggleButtonGroup from '@/components/ui/ToggleButtonGroup';
 import Typography from '@/components/ui/Typography';
+import { apiClient } from '@/services/apiClient';
 import { useAuthStore } from '@/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -33,7 +35,8 @@ interface CertificateImage {
 
 export default function CareerScreen() {
   const router = useRouter();
-  const { setCareerInfo, careerInfo, completeSignup } = useAuthStore();
+  const { setCareerInfo, careerInfo, completeSignup, signupInfo, caregiverInfo } =
+    useAuthStore();
 
   // 경력 여부 (false: 신입, true: 경력)
   const [hasExperience, setHasExperience] = useState(
@@ -100,7 +103,7 @@ export default function CareerScreen() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Store에 저장
     const selectedCerts = Object.keys(certificateImages);
     setCareerInfo({
@@ -108,17 +111,50 @@ export default function CareerScreen() {
       certificates: selectedCerts,
     });
 
-    // 회원가입 완료 처리
-    completeSignup();
+    // Backend profile create (MVP)
+    try {
+      const isForeigner = signupInfo?.isDomestic === false;
 
-    console.log('Career info saved:', {
-      hasExperience,
-      certificates: selectedCerts,
-      images: certificateImages,
-    });
+      const residentNumber =
+        signupInfo?.rrnFront && signupInfo?.rrnBack
+          ? `${signupInfo.rrnFront}${signupInfo.rrnBack}`
+          : undefined;
+      const foreignerNumber =
+        signupInfo?.foreignRegFront && signupInfo?.foreignRegBack
+          ? `${signupInfo.foreignRegFront}${signupInfo.foreignRegBack}`
+          : undefined;
 
-    // 홈 화면으로 이동 (스택 히스토리 제거)
-    router.replace('/(tabs)');
+      const payload = {
+        phone: caregiverInfo?.phone ?? signupInfo?.phone ?? '',
+        address: caregiverInfo?.address ?? '',
+        addressDetail: caregiverInfo?.addressDetail ?? undefined,
+        experienceYears: hasExperience ? 1 : 0,
+        isForeigner,
+        residentNumber: isForeigner ? undefined : residentNumber,
+        foreignerNumber: isForeigner ? foreignerNumber : undefined,
+      };
+
+      try {
+        await apiClient.post('/caregivers/profile', payload);
+      } catch (e: any) {
+        const status = e?.response?.status;
+        if (status === 409) {
+          await apiClient.put('/caregivers/profile', payload);
+        } else {
+          throw e;
+        }
+      }
+
+      // 회원가입 완료 처리
+      completeSignup();
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      const message =
+        e?.response?.data?.message ||
+        e?.message ||
+        '프로필 등록에 실패했습니다.';
+      Alert.alert('오류', String(message));
+    }
   };
 
   return (
