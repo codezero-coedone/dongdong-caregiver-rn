@@ -17,6 +17,24 @@ export default function CaregivingJournalLayout() {
             }}
         >
             <Stack.Screen
+                name="index"
+                options={{
+                    title: '간병일지',
+                }}
+            />
+            <Stack.Screen
+                name="new"
+                options={{
+                    title: '일지 작성',
+                }}
+            />
+            <Stack.Screen
+                name="[id]"
+                options={{
+                    title: '일지 상세',
+                }}
+            />
+            <Stack.Screen
                 name="meal-record"
                 options={{
                     title: '식사 기록',

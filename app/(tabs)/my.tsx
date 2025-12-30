@@ -439,7 +439,10 @@ export default function MyScreen() {
                 <Text style={styles.sectionTitle}>나의 리뷰</Text>
                 <Text style={styles.reviewRating}>평점 {MOCK_USER.rating}</Text>
               </View>
-              <TouchableOpacity style={styles.moreLink}>
+              <TouchableOpacity
+                style={styles.moreLink}
+                onPress={() => router.push('/reviews')}
+              >
                 <Text style={styles.moreLinkText}>더보기</Text>
                 <Ionicons name="chevron-forward" size={16} color="#37383C9C" />
               </TouchableOpacity>
