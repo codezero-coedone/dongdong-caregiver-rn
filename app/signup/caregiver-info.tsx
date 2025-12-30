@@ -28,7 +28,8 @@ type CaregiverFormData = z.infer<typeof caregiverInfoSchema>;
 
 export default function CaregiverInfoScreen() {
   const router = useRouter();
-  const { setCaregiverInfo, caregiverInfo } = useAuthStore();
+  const { setCaregiverInfo, caregiverInfo, signupInfo } = useAuthStore();
+  const isDomestic = signupInfo?.isDomestic ?? true;
   const [criminalRecordFile, setCriminalRecordFile] = useState<{
     uri: string;
     name: string;
@@ -176,7 +177,7 @@ export default function CaregiverInfoScreen() {
           />
         </View>
 
-        {/* RRN Field */}
+        {/* ID Number Field */}
         <View className="mb-5">
           <Text
             className="mb-2 text-sm font-semibold"
@@ -186,7 +187,7 @@ export default function CaregiverInfoScreen() {
               letterSpacing: 0.2,
             }}
           >
-            주민등록번호
+            {isDomestic ? '주민등록번호' : '외국인등록번호'}
           </Text>
           <View className="flex-row items-center">
             <View className="flex-1">
@@ -196,7 +197,7 @@ export default function CaregiverInfoScreen() {
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     containerClassName="flex-1 mb-0"
-                    placeholder="801225"
+                    placeholder={isDomestic ? '801225' : '800515'}
                     keyboardType="number-pad"
                     maxLength={6}
                     value={value}

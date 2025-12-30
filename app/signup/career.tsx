@@ -111,27 +111,48 @@ export default function CareerScreen() {
       certificates: selectedCerts,
     });
 
-    // Backend profile create (MVP)
     try {
-      const isForeigner = signupInfo?.isDomestic === false;
+      const toDigits = (s: string) => s.replace(/\D/g, '');
 
-      const residentNumber =
-        signupInfo?.rrnFront && signupInfo?.rrnBack
-          ? `${signupInfo.rrnFront}${signupInfo.rrnBack}`
-          : undefined;
-      const foreignerNumber =
-        signupInfo?.foreignRegFront && signupInfo?.foreignRegBack
-          ? `${signupInfo.foreignRegFront}${signupInfo.foreignRegBack}`
+      const isForeigner = signupInfo?.isDomestic === false;
+      const front =
+        (isForeigner ? signupInfo?.foreignRegFront : signupInfo?.rrnFront) ??
+        caregiverInfo?.rrnFront ??
+        '';
+      const back =
+        (isForeigner ? signupInfo?.foreignRegBack : signupInfo?.rrnBack) ??
+        caregiverInfo?.rrnBack ??
+        '';
+      const idNumber = toDigits(`${front}${back}`);
+
+      const phone = caregiverInfo?.phone ?? signupInfo?.phone ?? '';
+      const address = caregiverInfo?.address ?? '';
+
+      if (!phone || !address) {
+        Alert.alert('알림', '간병인 정보(휴대폰/주소)를 먼저 입력해주세요.');
+        router.replace('/signup/caregiver-info');
+        return;
+      }
+      if (idNumber.length !== 13) {
+        Alert.alert('알림', '주민/외국인등록번호 13자리를 확인해주세요.');
+        router.replace('/signup/info');
+        return;
+      }
+
+      const licenseType =
+        selectedCerts.length > 0
+          ? selectedCerts.join(',').slice(0, 64)
           : undefined;
 
       const payload = {
-        phone: caregiverInfo?.phone ?? signupInfo?.phone ?? '',
-        address: caregiverInfo?.address ?? '',
+        phone,
+        address,
         addressDetail: caregiverInfo?.addressDetail ?? undefined,
         experienceYears: hasExperience ? 1 : 0,
+        licenseType,
         isForeigner,
-        residentNumber: isForeigner ? undefined : residentNumber,
-        foreignerNumber: isForeigner ? foreignerNumber : undefined,
+        residentNumber: isForeigner ? undefined : idNumber,
+        foreignerNumber: isForeigner ? idNumber : undefined,
       };
 
       try {
@@ -145,15 +166,14 @@ export default function CareerScreen() {
         }
       }
 
-      // 회원가입 완료 처리
       completeSignup();
       router.replace('/(tabs)');
     } catch (e: any) {
-      const message =
+      const msg =
         e?.response?.data?.message ||
         e?.message ||
-        '프로필 등록에 실패했습니다.';
-      Alert.alert('오류', String(message));
+        '회원가입(프로필 생성)에 실패했습니다.';
+      Alert.alert('오류', String(msg));
     }
   };
 

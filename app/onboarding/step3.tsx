@@ -1,12 +1,12 @@
 import Button from '@/components/ui/Button';
 import { loginWithSocial } from '@/services/authService';
+import { apiClient } from '@/services/apiClient';
 import { Ionicons } from '@expo/vector-icons';
 import KakaoLogin from '@react-native-seoul/kakao-login';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   Image,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -32,32 +32,16 @@ export default function Step3() {
         accessToken: token.accessToken,
       });
 
-      router.replace('/(tabs)');
+      // 로그인 후: 프로필이 없으면 회원가입 플로우로 유도
+      try {
+        await apiClient.get('/caregivers/profile');
+        router.replace('/(tabs)');
+      } catch {
+        router.replace('/signup/info');
+      }
     } catch (e) {
       console.error('Kakao login error', e);
     }
-  };
-
-  /**
-   * ✅ 애플 로그인 (지금 구조 그대로 OK)
-   */
-  const handleAppleLogin = async () => {
-    // const credential = await AppleAuthentication.signInAsync({
-    //   requestedScopes: [
-    //     AppleAuthentication.AppleAuthenticationScope.EMAIL,
-    //     AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-    //   ],
-    // });
-    // if (!credential.identityToken) {
-    //   throw new Error('Apple identityToken 없음');
-    // }
-    // await loginWithSocial({
-    //   provider: 'APPLE',
-    //   accessToken: credential.identityToken,
-    //   email: credential.email ?? undefined,
-    //   name: credential.fullName?.givenName ?? undefined,
-    // });
-    // router.replace('/(tabs)');
   };
 
   return (
@@ -102,15 +86,6 @@ export default function Step3() {
             }
             onPress={handleKakaoLogin}
           />
-
-          {Platform.OS === 'ios' && (
-            <Button
-              title="애플 시작하기"
-              variant="apple"
-              icon={<Ionicons name="logo-apple" size={18} color="#fff" />}
-              onPress={handleAppleLogin}
-            />
-          )}
         </View>
       </View>
     </SafeAreaView>
