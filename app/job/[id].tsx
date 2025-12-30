@@ -115,8 +115,9 @@ export default function JobDetailScreen() {
                 )}
 
                 {!loading && !error && job && (
-                {/* 간병 위치 */}
-                <View style={styles.section}>
+                    <>
+                        {/* 간병 위치 */}
+                        <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Image source={require('@/assets/images/Location.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>간병 위치</Text>
@@ -137,10 +138,10 @@ export default function JobDetailScreen() {
                         <Text style={styles.fieldLabel}>상세 주소</Text>
                         <InfoBox variant="secret" />
                     </View>
-                </View>
+                        </View>
 
-                {/* 간병 기간 */}
-                <View style={styles.section}>
+                        {/* 간병 기간 */}
+                        <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Image source={require('@/assets/images/Calendar.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>간병 기간</Text>
@@ -160,10 +161,10 @@ export default function JobDetailScreen() {
                         <Text style={styles.fieldLabel}>근무 시간</Text>
                         <InfoBox value={'미정'} />
                     </View>
-                </View>
+                        </View>
 
-                {/* 환자 정보 */}
-                <View style={styles.section}>
+                        {/* 환자 정보 */}
+                        <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Image source={require('@/assets/images/Person.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>환자 정보</Text>
@@ -183,10 +184,10 @@ export default function JobDetailScreen() {
                             <InfoBox value={job.patientMobilityLevel || '-'} />
                         </View>
                     </View>
-                </View>
+                        </View>
 
-                {/* 입원 사유 */}
-                <View style={styles.section}>
+                        {/* 입원 사유 */}
+                        <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Image source={require('@/assets/images/Write.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>입원 사유</Text>
@@ -201,10 +202,10 @@ export default function JobDetailScreen() {
                         <Text style={styles.fieldLabel}>병실 종류</Text>
                         <InfoBox value={'-'} />
                     </View>
-                </View>
+                        </View>
 
-                {/* 간병 요청사항 */}
-                <View style={styles.section}>
+                        {/* 간병 요청사항 */}
+                        <View style={styles.section}>
                     <View style={styles.sectionHeader}>
                         <Image source={require('@/assets/images/Mail_Open.png')} style={{ width: 20, height: 20 }} />
                         <Text style={styles.sectionTitle}>간병 요청사항</Text>
@@ -218,9 +219,10 @@ export default function JobDetailScreen() {
                         <Text style={styles.fieldLabel}>일당</Text>
                         <InfoBox value={`${Number(job.dailyRate ?? 0).toLocaleString()}원`} />
                     </View>
-                </View>
+                        </View>
 
-                <View style={{ height: 100 }} />
+                        <View style={{ height: 100 }} />
+                    </>
                 )}
             </ScrollView>
 
