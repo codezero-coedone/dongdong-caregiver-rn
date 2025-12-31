@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "kr.slicemind.dongdong.caregiver"
+      "bundleIdentifier": "kr.slicemind.dongdong.caregiver",
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +22,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "kr.slicemind.dongdong.caregiver"
+      "package": "kr.slicemind.dongdong.caregiver",
+      "versionCode": 2
     },
     "web": {
       "output": "static",
