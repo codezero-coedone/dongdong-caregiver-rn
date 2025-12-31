@@ -29,6 +29,9 @@ module.exports = () => {
   }
 
   if (kakaoAppKey && !hasKakaoPlugin) {
+    // Force-inject Kakao AppKey meta-data to avoid "no-op" login on some devices/builds.
+    plugins.push(["./plugins/withKakaoAppKeyMetaData", { kakaoAppKey }]);
+
     plugins.push([
       '@react-native-seoul/kakao-login',
       // IMPORTANT: This MUST be a Kotlin version supported by Expo's expo-root-project KSP mapping.

@@ -2,10 +2,11 @@ import Button from '@/components/ui/Button';
 import { loginWithSocial } from '@/services/authService';
 import { apiClient } from '@/services/apiClient';
 import { Ionicons } from '@expo/vector-icons';
-import KakaoLogin from '@react-native-seoul/kakao-login';
+import { login as kakaoNativeLogin } from '@react-native-seoul/kakao-login';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import * as React from 'react';
 import {
+  Alert,
   Image,
   StyleSheet,
   Text,
@@ -16,20 +17,62 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Step3() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+
+  const formatKakaoError = (e: unknown): string => {
+    const raw = (e as any)?.message ? String((e as any).message) : String(e);
+
+    // Native SDK error (Kakao Developers Android key hash mismatch)
+    if (/keyhash/i.test(raw)) {
+      return (
+        'Android keyhash가 Kakao Developers 콘솔에 등록되지 않았습니다.\n\n' +
+        '조치:\n' +
+        '- Kakao Developers > 내 애플리케이션 > 플랫폼(Android)\n' +
+        '- 패키지: kr.slicemind.dongdong.caregiver\n' +
+        '- 현재 설치 채널(Play 내부테스트/사이드로드)에 맞는 keyhash를 추가 등록\n\n' +
+        '등록 후 앱을 재설치(Play 내부테스트 링크)하고 다시 시도해 주세요.'
+      );
+    }
+
+    if (/kakao/i.test(raw) && /appkey/i.test(raw)) {
+      return (
+        '카카오 앱키(AppKey)가 앱에 주입되지 않았습니다.\n\n' +
+        '빌드 시 EXPO_PUBLIC_KAKAO_APP_KEY(=6800df...)가 설정되어야 합니다.'
+      );
+    }
+
+    return raw || '카카오 로그인에 실패했습니다.';
+  };
 
   /**
    * ✅ 카카오 SDK 로그인
    */
   const handleKakaoLogin = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
     try {
-      const token = await KakaoLogin.login();
+      const kakaoAppKey =
+        process.env.EXPO_PUBLIC_KAKAO_APP_KEY || process.env.KAKAO_APP_KEY;
+      if (!kakaoAppKey) {
+        Alert.alert(
+          '설정 오류',
+          'EXPO_PUBLIC_KAKAO_APP_KEY가 설정되지 않은 빌드입니다.\n(카카오 로그인 불가)',
+        );
+        return;
+      }
+
+      const token = await kakaoNativeLogin();
+      const accessToken: string | undefined = (token as any)?.accessToken;
+      if (!accessToken) {
+        throw new Error('카카오 accessToken을 가져올 수 없습니다.');
+      }
 
       /**
        * token.accessToken ← 이게 핵심
        */
       await loginWithSocial({
         provider: 'KAKAO',
-        accessToken: token.accessToken,
+        accessToken,
       });
 
       // 로그인 후: 프로필이 없으면 회원가입 플로우로 유도
@@ -41,6 +84,9 @@ export default function Step3() {
       }
     } catch (e) {
       console.error('Kakao login error', e);
+      Alert.alert('카카오 로그인 실패', formatKakaoError(e));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,6 +124,7 @@ export default function Step3() {
           <Button
             title="카카오 시작하기"
             variant="kakao"
+            isLoading={isLoading}
             icon={
               <Image
                 source={require('@/assets/images/icons/kakao.png')}
