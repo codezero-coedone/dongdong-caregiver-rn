@@ -1,6 +1,11 @@
 import Button from '@/components/ui/Button';
 import { loginWithSocial } from '@/services/authService';
-import { apiClient } from '@/services/apiClient';
+import {
+  apiClient,
+  API_HEALTH_PATH,
+  getApiBaseUrl,
+  pingHealth,
+} from '@/services/apiClient';
 import { Ionicons } from '@expo/vector-icons';
 import { login as kakaoNativeLogin } from '@react-native-seoul/kakao-login';
 import { useRouter } from 'expo-router';
@@ -26,9 +31,10 @@ export default function Step3() {
       return (
         '네트워크 오류로 서버에 연결할 수 없습니다.\n\n' +
         '확인:\n' +
-        '- EXPO_PUBLIC_API_URL = http://api.dongdong.io:3000/api/v1\n' +
+        `- EXPO_PUBLIC_API_URL = ${getApiBaseUrl()}\n` +
+        `- 서버 헬스체크: ${getApiBaseUrl()}${API_HEALTH_PATH}\n` +
         '- 안드로이드에서 HTTP(비TLS) 차단이 걸리면 Network Error가 날 수 있습니다.\n' +
-        '  (이번 빌드부터 usesCleartextTraffic=true 적용)\n' +
+        '  (해결: 다음 빌드부터 usesCleartextTraffic=true 강제 적용)\n' +
         '- 모바일 데이터/와이파이 환경에서 api.dongdong.io 접속 가능 여부'
       );
     }
@@ -95,7 +101,24 @@ export default function Step3() {
       }
     } catch (e) {
       console.error('Kakao login error', e);
-      Alert.alert('카카오 로그인 실패', formatKakaoError(e));
+      // Deterministic preflight: tells us whether "Network Error" is global connectivity vs per-endpoint.
+      try {
+        const health = await pingHealth();
+        if (!health.ok) {
+          Alert.alert(
+            '카카오 로그인 실패',
+            formatKakaoError(
+              new Error(
+                `서버 연결 실패(${health.reason}). base=${getApiBaseUrl()} (health=${getApiBaseUrl()}${API_HEALTH_PATH})`,
+              ),
+            ),
+          );
+        } else {
+          Alert.alert('카카오 로그인 실패', formatKakaoError(e));
+        }
+      } catch {
+        Alert.alert('카카오 로그인 실패', formatKakaoError(e));
+      }
     } finally {
       setIsLoading(false);
     }

@@ -12,6 +12,17 @@ import {
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || 'http://api.dongdong.io:3000/api/v1';
 
+export const API_HEALTH_PATH = '/health';
+
+export function getApiBaseUrl(): string {
+    return API_BASE_URL;
+}
+
+export type HealthCheckResult =
+    | { ok: true; status: 'ok' }
+    | { ok: false; reason: 'NETWORK'; message: string }
+    | { ok: false; reason: 'HTTP'; status: number; message: string };
+
 // Create axios instance with default config
 export const apiClient = axios.create({
     baseURL: API_BASE_URL,
@@ -20,6 +31,31 @@ export const apiClient = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+/**
+ * Deterministic connectivity check.
+ * - If this passes, "Network Error" is NOT a general connectivity issue; it's usually
+ *   cleartext(HTTP) blocked, wrong baseURL, or server-side error on a specific endpoint.
+ */
+export async function pingHealth(): Promise<HealthCheckResult> {
+    try {
+        const res = await axios.get(`${API_BASE_URL}${API_HEALTH_PATH}`, {
+            timeout: 6000,
+            headers: { 'Content-Type': 'application/json' },
+        });
+        if (res?.data?.status === 'ok') return { ok: true, status: 'ok' };
+        return { ok: false, reason: 'HTTP', status: res.status, message: 'unexpected health response' };
+    } catch (e: any) {
+        const ax = e as AxiosError;
+        const status = (ax as any)?.response?.status;
+        if (typeof status === 'number') {
+            return { ok: false, reason: 'HTTP', status, message: `health status=${status}` };
+        }
+        const msg =
+            (ax as any)?.message ? String((ax as any).message) : String(e);
+        return { ok: false, reason: 'NETWORK', message: msg };
+    }
+}
 
 // Flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
