@@ -1,8 +1,10 @@
 {
   "name": "dongdong-caregiver-rn",
+  "packageManager": "yarn@1.22.22",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
+    "postinstall": "node ./scripts/postinstall-fix-datetimepicker.js",
     "fix:watchman": "watchman watch-del-all",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
