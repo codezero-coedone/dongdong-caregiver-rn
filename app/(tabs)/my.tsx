@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,95 +10,20 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import apiClient from '@/services/apiClient';
+import api from '@/services/apiClient';
 import CaregivingJournalHome from '../caregiving-journal';
 
-// Mock 사용자 데이터
-const MOCK_USER = {
-  name: '김간병',
-  isVerified: true,
-  rating: 4.7,
-  experience: '경력 3년',
-  certificates: '요양보호사 외 3',
+// 결정성/실데이터 정책:
+// - MY 화면에서 mock 소개/수익 숫자를 노출하지 않는다.
+// - 프로필/매칭/리뷰는 API 기반으로 표시하고, 수익은 완료된 매칭 기반 추정치로만 표기한다.
+const DEFAULT_USER = {
+  name: '간병인',
+  isVerified: false,
+  rating: 0,
+  experience: '경력 -',
+  certificates: '-',
   hasIntroduction: false,
 };
-
-// Mock 진행 중인 간병 데이터
-const MOCK_ONGOING_CARE = {
-  daysRemaining: 15,
-  patient: {
-    name: '이환자',
-    age: 68,
-    gender: '남',
-  },
-  tags: ['폐암 3기', '입원치료 중', '부분 도움'],
-  period: '2025.11.15~11.30',
-  diagnosis: '폐렴 및 심압',
-};
-
-// Mock 나의 소개 데이터
-const MOCK_INTRODUCTION = {
-  selfIntro: '친절하고 섬세하게 간병하겠습니다.',
-  strengths: ['친절함', '책임감', '세심함'],
-  specialties: ['골절', '재활 치료', '외상 환자', '기저귀 케어'],
-};
-
-// Mock 리뷰 데이터
-const MOCK_REVIEWS = [
-  {
-    id: '1',
-    patientName: '이환자',
-    rating: 4,
-    period: '2025.11.19~2025.11.26',
-    content:
-      '"항상 시간 약속을 잘 지켜주시고, 환자를 세심하게 케어해주셔서 너무 감사했습니다. 대화도 친절하게 해주셔서 환자분도 편안해하셨습니다. 다음에도 꼭 부탁드리고 싶어요!"',
-  },
-  {
-    id: '2',
-    patientName: '이환자',
-    rating: 5,
-    period: '2025.11.19~2025.11.26',
-    content: '"좋아요! 자주 부탁드리러구요 !"',
-  },
-  {
-    id: '3',
-    patientName: '이환자',
-    rating: 4,
-    period: '2025.11.19~2025.11.26',
-    content:
-      '"센스가 있으셔서 매번 말안해도 척척해주시더라구요 이래서 경력직을 쓰나봅니다ㅎㅎ"',
-  },
-];
-
-const MOCK_EARNING_SUMMARY = {
-  total: 1123000,
-  workDays: 10,
-  workHours: 80,
-};
-
-const MOCK_EARNINGS = [
-  {
-    id: '1',
-    noticeNo: '12345',
-    patientName: '이환자',
-    period: '2025.11.15 ~ 11.30',
-    amount: 500000,
-  },
-  {
-    id: '2',
-    noticeNo: '12345',
-    patientName: '이환자',
-    period: '2025.11.15 ~ 11.30',
-    amount: 100000,
-  },
-  {
-    id: '3',
-    noticeNo: '12345',
-    patientName: '이환자',
-    period: '2025.11.15 ~ 11.30',
-    amount: 523000,
-  },
-];
 
 const TABS = ['MY홈', '간병일지', '수익'];
 
@@ -107,6 +33,7 @@ export default function MyScreen() {
   const [loadingMy, setLoadingMy] = useState(true);
   const [myError, setMyError] = useState<string | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
+  const [myMatches, setMyMatches] = useState<any[]>([]);
   const [ongoingMatch, setOngoingMatch] = useState<any | null>(null);
   const [reviewPreview, setReviewPreview] = useState<any[]>([]);
 
@@ -124,14 +51,15 @@ export default function MyScreen() {
     setMyError(null);
     (async () => {
       try {
-        const profRes = await apiClient.get('/caregivers/profile');
+        const profRes = await api.get('/caregivers/profile');
         const prof = unwrapData<any>((profRes as any)?.data);
         if (!alive) return;
         setProfile(prof ?? null);
 
-        const matchRes = await apiClient.get('/my/matches');
+        const matchRes = await api.get('/my/matches');
         const matches = unwrapData<any[]>((matchRes as any)?.data);
         const arr = Array.isArray(matches) ? matches : [];
+        setMyMatches(arr);
         const ongoing =
           arr.find((m) => m?.status !== 'COMPLETED' && m?.status !== 'CANCELLED') ??
           arr[0] ??
@@ -139,7 +67,7 @@ export default function MyScreen() {
         setOngoingMatch(ongoing);
 
         if (prof?.id) {
-          const reviewRes = await apiClient.get(`/reviews/caregiver/${prof.id}`);
+          const reviewRes = await api.get(`/reviews/caregiver/${prof.id}`);
           const reviewData = unwrapData<any>((reviewRes as any)?.data);
           const rows = Array.isArray(reviewData?.reviews) ? reviewData.reviews : [];
           setReviewPreview(rows.slice(0, 3));
@@ -152,6 +80,7 @@ export default function MyScreen() {
           e?.response?.data?.message || e?.message || 'MY 데이터를 불러오지 못했습니다.',
         );
         setProfile(null);
+        setMyMatches([]);
         setOngoingMatch(null);
         setReviewPreview([]);
       } finally {
@@ -165,21 +94,85 @@ export default function MyScreen() {
   }, []);
 
   const user = useMemo(() => {
-    if (!profile) return MOCK_USER;
+    if (!profile) return DEFAULT_USER;
     const years = Number(profile.experienceYears ?? 0);
-    const exp = Number.isFinite(years) ? `경력 ${years}년` : MOCK_USER.experience;
+    const exp = Number.isFinite(years) ? `경력 ${years}년` : DEFAULT_USER.experience;
     const cert = profile.licenseType
       ? profile.licenseType
-      : MOCK_USER.certificates;
+      : DEFAULT_USER.certificates;
     return {
-      name: profile.name ?? MOCK_USER.name,
+      name: profile.name ?? DEFAULT_USER.name,
       isVerified: Boolean(profile.isVerified),
-      rating: Number(profile.rating ?? MOCK_USER.rating),
+      rating: Number(profile.rating ?? DEFAULT_USER.rating),
       experience: exp,
       certificates: cert,
       hasIntroduction: Boolean(profile.introduction),
     };
   }, [profile]);
+
+  const formatYmd = (iso: string | null | undefined): string => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
+  };
+
+  const calcDaysInclusive = (startIso: string, endIso: string): number => {
+    const s = new Date(startIso);
+    const e = new Date(endIso);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return 0;
+    const sUtc = Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), s.getUTCDate());
+    const eUtc = Date.UTC(e.getUTCFullYear(), e.getUTCMonth(), e.getUTCDate());
+    const diff = Math.floor((eUtc - sUtc) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff + 1);
+  };
+
+  const earnings = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth(); // 0-based
+    const monthStart = Date.UTC(y, m, 1);
+    const monthEnd = Date.UTC(y, m + 1, 1) - 1;
+
+    const items = (Array.isArray(myMatches) ? myMatches : [])
+      .map((x) => {
+        const end = new Date(String(x?.endDate || ''));
+        const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+        const dailyRate = Number(x?.dailyRate ?? 0);
+        const days =
+          x?.startDate && x?.endDate
+            ? calcDaysInclusive(String(x.startDate), String(x.endDate))
+            : 0;
+        const amount = Number.isFinite(dailyRate) ? dailyRate * days : 0;
+        return {
+          id: String(x?.id ?? ''),
+          patientName: String(x?.patientName ?? '환자'),
+          startDate: String(x?.startDate ?? ''),
+          endDate: String(x?.endDate ?? ''),
+          dailyRate: Number.isFinite(dailyRate) ? dailyRate : 0,
+          days,
+          amount,
+          endUtc,
+          status: String(x?.status ?? ''),
+        };
+      })
+      .filter((x) => x.id && x.endUtc >= monthStart && x.endUtc <= monthEnd)
+      .filter((x) => x.status === 'COMPLETED' || x.days > 0)
+      .sort((a, b) => b.endUtc - a.endUtc);
+
+    const total = items.reduce(
+      (acc, x) => acc + (Number.isFinite(x.amount) ? x.amount : 0),
+      0,
+    );
+    const workDays = items.reduce(
+      (acc, x) => acc + (Number.isFinite(x.days) ? x.days : 0),
+      0,
+    );
+    return { total, workDays, items };
+  }, [myMatches]);
 
   const ongoingUi = useMemo(() => {
     if (!ongoingMatch) return null;
@@ -442,50 +435,26 @@ export default function MyScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>나의 소개</Text>
-              {MOCK_INTRODUCTION && (
-                <TouchableOpacity
-                  style={styles.editLink}
-                  onPress={() => router.push('/profile/introduction')}
-                >
-                  <Text style={styles.editLinkText}>편집</Text>
-                  <Ionicons name="pencil" size={14} color="#171719" />
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.editLink}
+                onPress={() => router.push('/profile/introduction')}
+              >
+                <Text style={styles.editLinkText}>
+                  {user.hasIntroduction ? '편집' : '등록'}
+                </Text>
+                <Ionicons name="pencil" size={14} color="#171719" />
+              </TouchableOpacity>
             </View>
 
-            {MOCK_INTRODUCTION ? (
+            {user.hasIntroduction ? (
               <View style={styles.introductionCard}>
                 {/* 자기소개 */}
                 <View style={styles.introSection}>
                   <Text style={styles.introLabel}>자기소개</Text>
                   <View style={styles.introTextBox}>
                     <Text style={styles.introText}>
-                      {MOCK_INTRODUCTION.selfIntro}
+                      {String(profile?.introduction ?? '').trim()}
                     </Text>
-                  </View>
-                </View>
-
-                {/* 나만의 강점 */}
-                <View style={styles.introSection}>
-                  <Text style={styles.introLabel}>나만의 강점</Text>
-                  <View style={styles.chipContainer}>
-                    {MOCK_INTRODUCTION.strengths.map((strength, index) => (
-                      <View key={index} style={styles.chip}>
-                        <Text style={styles.chipText}>{strength}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-
-                {/* 자신 있는 돌봄 */}
-                <View style={styles.introSection}>
-                  <Text style={styles.introLabel}>자신 있는 돌봄</Text>
-                  <View style={styles.chipContainer}>
-                    {MOCK_INTRODUCTION.specialties.map((specialty, index) => (
-                      <View key={index} style={styles.chip}>
-                        <Text style={styles.chipText}>{specialty}</Text>
-                      </View>
-                    ))}
                   </View>
                 </View>
               </View>
@@ -569,7 +538,10 @@ export default function MyScreen() {
           <View style={styles.earningHeader}>
             <Text style={styles.earningTitle}>이번달 총 수익</Text>
             <Text style={styles.earningTotal}>
-              {MOCK_EARNING_SUMMARY.total.toLocaleString()}원
+              {Number(earnings.total || 0).toLocaleString()}원
+            </Text>
+            <Text style={styles.earningHint}>
+              * 정산 확정 전, 완료된 매칭(일 단가 × 기간) 기반의 추정치입니다.
             </Text>
           </View>
 
@@ -578,24 +550,28 @@ export default function MyScreen() {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>근무 일수</Text>
               <Text style={styles.summaryValue}>
-                {MOCK_EARNING_SUMMARY.workDays}일
+                {Number(earnings.workDays || 0)}일
               </Text>
             </View>
             <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-              <Text style={styles.summaryLabel}>근무 시간</Text>
-              <Text style={styles.summaryValue}>
-                {MOCK_EARNING_SUMMARY.workHours}시간
-              </Text>
+              <Text style={styles.summaryLabel}>완료 매칭</Text>
+              <Text style={styles.summaryValue}>{earnings.items.length}건</Text>
             </View>
           </View>
 
           {/* 출금 관련 */}
-          <TouchableOpacity style={styles.linkRow}>
+          <TouchableOpacity
+            style={styles.linkRow}
+            onPress={() => Alert.alert('안내', '출금 계좌 설정 화면은 준비 중입니다.')}
+          >
             <Text style={styles.linkText}>출금 계좌 설정</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.linkRow}>
+          <TouchableOpacity
+            style={styles.linkRow}
+            onPress={() => Alert.alert('안내', '출금 내역 화면은 준비 중입니다.')}
+          >
             <Text style={styles.linkText}>출금 내역</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
@@ -610,29 +586,37 @@ export default function MyScreen() {
             <View style={styles.earningMonthRow}>
               <Ionicons name="chevron-back" size={20} color="#9CA3AF" />
               <View style={styles.monthCenter}>
-                <Text style={styles.earningMonthText}>2025년 11월</Text>
+                <Text style={styles.earningMonthText}>
+                  {new Date().getFullYear()}년 {new Date().getMonth() + 1}월
+                </Text>
                 <Ionicons name="caret-down" size={14} color="#111827" />
               </View>
               <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
             </View>
 
-            {MOCK_EARNINGS.map((item) => (
-              <View key={item.id} style={styles.earningCard}>
-                <View style={styles.earningCardTop}>
-                  <Text style={styles.noticeText}>
-                    공고번호 {item.noticeNo}
-                  </Text>
-                  <Text style={styles.periodText}>{item.period}</Text>
-                </View>
+            {earnings.items.length > 0 ? (
+              earnings.items.map((it) => (
+                <View key={it.id} style={styles.earningCard}>
+                  <View style={styles.earningCardTop}>
+                    <Text style={styles.noticeText}>매칭 #{it.id}</Text>
+                    <Text style={styles.periodText}>
+                      {formatYmd(it.startDate)} ~ {formatYmd(it.endDate)}
+                    </Text>
+                  </View>
 
-                <View style={styles.earningCardBottom}>
-                  <Text style={styles.patientText}>{item.patientName}</Text>
-                  <Text style={styles.amountText}>
-                    {item.amount.toLocaleString()} 원
-                  </Text>
+                  <View style={styles.earningCardBottom}>
+                    <Text style={styles.patientText}>{it.patientName}</Text>
+                    <Text style={styles.amountText}>
+                      {Number(it.amount || 0).toLocaleString()} 원
+                    </Text>
+                  </View>
                 </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>이번달 수익 내역이 없습니다.</Text>
               </View>
-            ))}
+            )}
           </View>
 
           <View style={{ height: 80 }} />
@@ -1149,6 +1133,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#171719',
   },
+  earningHint: {
+    marginTop: 6,
+    marginLeft: 20,
+    marginRight: 20,
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 16,
+  },
   earningSummaryCard: {
     backgroundColor: '#F7F7F8',
     borderRadius: 12,
@@ -1253,6 +1245,16 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '500',
     color: '#0066FF',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#6B7280',
   },
   referralWrapper: {
     marginBottom: 8,
