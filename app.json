@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "dongdongcaregiverrn",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "kr.slicemind.dongdong.caregiver",
