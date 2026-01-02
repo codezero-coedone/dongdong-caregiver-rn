@@ -6,6 +6,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Define permission types
 type PermissionItemProps = {
@@ -65,10 +66,15 @@ export default function PermissionScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerSide} />
         <Text style={styles.headerTitle}>권한 동의</Text>
+        <View style={styles.headerSide} />
+      </View>
 
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.mainTitle}>
           안전하고 간편한 동동 이용을 위해{'\n'}
           아래 권한 허용이 필요해요.
@@ -112,18 +118,18 @@ export default function PermissionScreen() {
           description="환자/보호자/간병인 전화 시 사용"
           isOptional
         />
-
       </ScrollView>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          선택 권한의 경우 허용하지 않으셔도 앱 이용은 가능하나, 일부 서비스 이용에 제한이 있을 수 있습니다.
+          선택 권한의 경우 허용하지 않으셔도 앱 이용은 가능하나, 일부 서비스
+          이용에 제한이 있을 수 있습니다.
         </Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermissions}>
+        <TouchableOpacity style={styles.button} onPress={requestPermissions} activeOpacity={0.9}>
           <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -131,34 +137,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingTop: 60, // Adjust for status bar
+  },
+  header: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#70737C29',
+    backgroundColor: '#fff',
+  },
+  headerSide: {
+    width: 24,
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 120, // Space for footer
+    paddingTop: 24,
+    paddingBottom: 24,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 40,
     color: '#000',
   },
   mainTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     lineHeight: 32,
-    marginBottom: 30,
+    marginBottom: 24,
     color: '#000',
   },
   sectionTitle: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   itemContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 22,
     alignItems: 'flex-start',
   },
   iconContainer: {
@@ -191,10 +209,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#fff',
     padding: 24,
     borderTopWidth: 1,
@@ -209,12 +223,13 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#007AFF',
     borderRadius: 12,
-    paddingVertical: 16,
+    height: 56,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
   },
 });
