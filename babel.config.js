@@ -1,11 +1,14 @@
 module.exports = function (api) {
     api.cache(true);
     return {
-        // NativeWind v4: `nativewind/babel` must be a Babel *plugin* (not a preset).
-        // If misconfigured, Android release builds can silently ignore `className` styles.
-        presets: [['babel-preset-expo', { jsxImportSource: 'nativewind' }]],
-        plugins: [
+        // NativeWind v4:
+        // - Keep `jsxImportSource: 'nativewind'` on the Expo preset.
+        // - `nativewind/babel` must be used as a *preset* (it expands to underlying plugins).
+        presets: [
+            ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
             'nativewind/babel',
+        ],
+        plugins: [
             [
                 'module-resolver',
                 {
