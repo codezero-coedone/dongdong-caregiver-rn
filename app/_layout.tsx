@@ -17,7 +17,7 @@ import '../global.css'; // Import global CSS for NativeWind
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { QueryProvider } from '@/services/QueryProvider';
 import { useAuthStore } from '@/store/authStore';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 function parseSemver(v: string): [number, number, number] {
@@ -118,6 +118,25 @@ export default function RootLayout() {
   const router = useRouter();
 
   const rootNavigationState = useRootNavigationState();
+  const [hydrated, setHydrated] = useState<boolean>(false);
+
+  // Persist hydration gate:
+  // - Redirect logic must wait until persisted auth state is loaded,
+  //   otherwise the app can bounce back to onboarding after a successful login.
+  useEffect(() => {
+    const p = (useAuthStore as any).persist;
+    try {
+      if (p?.hasHydrated?.()) setHydrated(true);
+      const unsub = p?.onFinishHydration?.(() => setHydrated(true));
+      return () => {
+        if (typeof unsub === 'function') unsub();
+      };
+    } catch {
+      // If persist helpers are unavailable, fail open (avoid redirect loops).
+      setHydrated(true);
+      return;
+    }
+  }, []);
 
   const appVersion = getAppVersion();
   const minVersion = process.env.EXPO_PUBLIC_MIN_APP_VERSION || '1.0.0';
@@ -126,6 +145,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!rootNavigationState?.key) return;
+    if (!hydrated) return;
     const inAuthGroup = segments[0] === 'onboarding';
     const inSignupGroup = segments[0] === 'signup';
 
@@ -143,7 +163,7 @@ export default function RootLayout() {
       // Redirect to home if logged in and signup complete, but still in auth screens
       setTimeout(() => router.replace('/'), 0);
     }
-  }, [isLoggedIn, isSignupComplete, segments, rootNavigationState?.key]);
+  }, [hydrated, isLoggedIn, isSignupComplete, segments, rootNavigationState?.key]);
 
   if (needsUpdate) {
     return (

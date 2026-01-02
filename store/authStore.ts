@@ -36,6 +36,12 @@ interface CareerInfo {
 }
 
 interface AuthState {
+    /**
+     * Zustand persist hydration flag.
+     * - RootLayout redirects must wait until persisted state is loaded,
+     *   otherwise the app can "bounce" back to onboarding after a successful login.
+     */
+    hydrated: boolean;
     isLoggedIn: boolean;
     isSignupComplete: boolean;
     loginType: LoginType;
@@ -58,6 +64,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
     persist(
         (set) => ({
+            hydrated: false,
             isLoggedIn: false,
             isSignupComplete: false,
             loginType: null,
@@ -79,11 +86,21 @@ export const useAuthStore = create<AuthState>()(
         {
             name: 'dongdong-auth-storage',
             storage: createJSONStorage(() => AsyncStorage),
+            onRehydrateStorage: () => (state) => {
+                // Mark hydration completion (even if state is undefined on failure).
+                // This prevents RootLayout from redirecting based on default false flags.
+                try {
+                    state?.setState?.({ hydrated: true } as any);
+                } catch {
+                    // ignore
+                }
+            },
             partialize: (state) => ({
                 signupInfo: state.signupInfo,
                 caregiverInfo: state.caregiverInfo,
                 careerInfo: state.careerInfo,
                 isLoggedIn: state.isLoggedIn,
+                isSignupComplete: state.isSignupComplete,
                 loginType: state.loginType,
             }),
         }

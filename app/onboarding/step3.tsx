@@ -19,10 +19,13 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Step3() {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const setLoggedIn = useAuthStore((s) => s.login);
+  const completeSignup = useAuthStore((s) => s.completeSignup);
 
   const formatKakaoError = (e: unknown): string => {
     const raw = (e as any)?.message ? String((e as any).message) : String(e);
@@ -95,8 +98,13 @@ export default function Step3() {
       // 로그인 후: 프로필이 없으면 회원가입 플로우로 유도
       try {
         await apiClient.get('/caregivers/profile');
+        // IMPORTANT: RootLayout redirects based on zustand auth flags.
+        // If we don't set them here, the app can bounce back to onboarding after a successful login.
+        setLoggedIn('kakao');
+        completeSignup();
         router.replace('/(tabs)');
       } catch {
+        setLoggedIn('kakao');
         router.replace('/signup/info');
       }
     } catch (e) {
