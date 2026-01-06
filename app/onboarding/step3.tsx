@@ -21,6 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import type { AxiosError } from 'axios';
+import { devlog } from '@/services/devlog';
 
 export default function Step3() {
   const router = useRouter();
@@ -89,9 +90,19 @@ export default function Step3() {
     if (isLoading) return;
     setIsLoading(true);
     try {
+      devlog({
+        scope: 'KAKAO',
+        level: 'info',
+        message: 'kakao login: start',
+      });
       const kakaoAppKey =
         process.env.EXPO_PUBLIC_KAKAO_APP_KEY || process.env.KAKAO_APP_KEY;
       if (!kakaoAppKey) {
+        devlog({
+          scope: 'KAKAO',
+          level: 'error',
+          message: 'kakao login: missing app key (EXPO_PUBLIC_KAKAO_APP_KEY)',
+        });
         Alert.alert(
           '설정 오류',
           'EXPO_PUBLIC_KAKAO_APP_KEY가 설정되지 않은 빌드입니다.\n(카카오 로그인 불가)',
@@ -110,8 +121,19 @@ export default function Step3() {
       const token = await kakaoNativeLogin();
       const accessToken: string | undefined = (token as any)?.accessToken;
       if (!accessToken) {
+        devlog({
+          scope: 'KAKAO',
+          level: 'error',
+          message: 'kakao login: token missing accessToken',
+          meta: { tokenKeys: token && typeof token === 'object' ? Object.keys(token as any) : [] },
+        });
         throw new Error('카카오 accessToken을 가져올 수 없습니다.');
       }
+      devlog({
+        scope: 'KAKAO',
+        level: 'info',
+        message: 'kakao login: got accessToken (len=' + String(accessToken.length) + ')',
+      });
 
       /**
        * token.accessToken ← 이게 핵심
@@ -121,7 +143,21 @@ export default function Step3() {
           provider: 'KAKAO',
           accessToken,
         });
+        devlog({
+          scope: 'KAKAO',
+          level: 'info',
+          message: 'backend /auth/social: OK',
+        });
       } catch (e) {
+        devlog({
+          scope: 'KAKAO',
+          level: 'error',
+          message: 'backend /auth/social: FAIL',
+          meta: {
+            status: (e as any)?.response?.status,
+            message: (e as any)?.response?.data?.message || (e as any)?.message,
+          },
+        });
         Alert.alert('카카오 로그인 실패', formatApiError(e, '소셜 로그인(/auth/social)'));
         return;
       }
@@ -129,17 +165,37 @@ export default function Step3() {
       // 로그인 후: 프로필이 없으면 회원가입 플로우로 유도
       try {
         await apiClient.get('/caregivers/profile');
+        devlog({
+          scope: 'KAKAO',
+          level: 'info',
+          message: 'backend /caregivers/profile: OK',
+        });
         // IMPORTANT: RootLayout redirects based on zustand auth flags.
         // If we don't set them here, the app can bounce back to onboarding after a successful login.
         setLoggedIn('kakao');
         completeSignup();
         router.replace('/(tabs)');
       } catch {
+        devlog({
+          scope: 'KAKAO',
+          level: 'warn',
+          message: 'backend /caregivers/profile: FAIL (route to signup)',
+        });
         setLoggedIn('kakao');
         router.replace('/signup/info');
       }
     } catch (e) {
       console.error('Kakao login error', e);
+      devlog({
+        scope: 'KAKAO',
+        level: 'error',
+        message: 'kakao login: exception',
+        meta: {
+          raw: String((e as any)?.message || e),
+          name: (e as any)?.name,
+          code: (e as any)?.code,
+        },
+      });
       // Deterministic preflight: tells us whether "Network Error" is global connectivity vs per-endpoint.
       try {
         const health = await pingHealth();
