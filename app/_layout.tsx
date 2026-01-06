@@ -19,6 +19,7 @@ import { QueryProvider } from '@/services/QueryProvider';
 import { useAuthStore } from '@/store/authStore';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import DevOverlay from '@/components/dev/DevOverlay';
 
 function parseSemver(v: string): [number, number, number] {
   const parts = String(v || '')
@@ -196,6 +197,7 @@ export default function RootLayout() {
           <Stack.Screen name="permission" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
+        <DevOverlay />
       </ThemeProvider>
     </QueryProvider>
   );

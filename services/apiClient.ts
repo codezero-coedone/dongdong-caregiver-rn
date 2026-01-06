@@ -6,6 +6,7 @@ import {
   isTokenExpired,
   saveTokens,
 } from './tokenService';
+import { devlog } from './devlog';
 
 // Default follows backend SSOT DEV base + prefix.
 // Override by setting EXPO_PUBLIC_API_URL (e.g. http://api.dongdong.io:3000/api/v1)
@@ -60,6 +61,7 @@ export async function pingHealth(): Promise<HealthCheckResult> {
 // Flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
+let seq = 0;
 
 /**
  * Add subscriber to be notified when token refresh completes
@@ -117,6 +119,20 @@ async function refreshAccessToken(): Promise<string | null> {
 // Request interceptor - add auth token if available
 apiClient.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
+        // Deterministic request id (local only; do NOT include tokens in logs)
+        const rid = `${Date.now()}-${++seq}`;
+        (config as any).__dd = {
+            rid,
+            startedAt: Date.now(),
+            method: String(config.method || 'get').toUpperCase(),
+            url: String(config.url || ''),
+        };
+        try {
+            config.headers['X-DD-Request-Id'] = rid;
+        } catch {
+            // ignore
+        }
+
         // Check if token needs refresh before making request
         const expired = await isTokenExpired();
 
@@ -139,6 +155,15 @@ apiClient.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
 
+        // DEV trace (request line only)
+        const dd = (config as any).__dd;
+        devlog({
+            scope: 'API',
+            level: 'info',
+            message: `${dd?.method || 'GET'} ${dd?.url || config.url || ''} → …`,
+            meta: { rid: dd?.rid, method: dd?.method, url: dd?.url },
+        });
+
         return config;
     },
     (error) => {
@@ -151,6 +176,32 @@ apiClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+        const dd = (originalRequest as any)?.__dd;
+        const startedAt = typeof dd?.startedAt === 'number' ? dd.startedAt : undefined;
+        const ms = startedAt ? Date.now() - startedAt : undefined;
+        const status = (error as any)?.response?.status;
+        const url = dd?.url || originalRequest?.url || '';
+        const method = dd?.method || String(originalRequest?.method || 'get').toUpperCase();
+        const backendMsg =
+            (error as any)?.response?.data?.message ||
+            (error as any)?.response?.data?.error ||
+            '';
+
+        if (typeof status === 'number') {
+            devlog({
+                scope: 'API',
+                level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
+                message: `${method} ${url} → ${status}${typeof ms === 'number' ? ` (${ms}ms)` : ''}${backendMsg ? ` | ${String(backendMsg)}` : ''}`,
+                meta: { rid: dd?.rid, method, url, status, ms },
+            });
+        } else {
+            devlog({
+                scope: 'API',
+                level: 'error',
+                message: `${method} ${url} → NETWORK${typeof ms === 'number' ? ` (${ms}ms)` : ''} | ${String((error as any)?.message || error)}`,
+                meta: { rid: dd?.rid, method, url, ms },
+            });
+        }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             // Token expired during request, try to refresh
