@@ -20,12 +20,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import type { AxiosError } from 'axios';
 
 export default function Step3() {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const setLoggedIn = useAuthStore((s) => s.login);
   const completeSignup = useAuthStore((s) => s.completeSignup);
+
+  const formatApiError = (e: unknown, label: string): string => {
+    const ax = e as AxiosError;
+    const status = (ax as any)?.response?.status;
+    const data = (ax as any)?.response?.data;
+    const base = getApiBaseUrl();
+    if (typeof status === 'number') {
+      const msg = (data as any)?.message
+        ? String((data as any)?.message)
+        : (data as any)?.error
+          ? String((data as any)?.error)
+          : '';
+      // Avoid dumping tokens/PII; show only deterministic status + backend message.
+      return `${label} 실패: HTTP ${status}\nbase=${base}\n${msg ? `message=${msg}` : ''}`.trim();
+    }
+    return `${label} 실패: ${String((e as any)?.message || e)}`.trim();
+  };
 
   const formatKakaoError = (e: unknown): string => {
     const raw = (e as any)?.message ? String((e as any).message) : String(e);
@@ -81,6 +99,14 @@ export default function Step3() {
         return;
       }
 
+      // ✅ 로그인 정책(내부테스트/구형기기 고려):
+      // - 1순위: 카카오톡 앱 로그인(앱 전환)
+      // - 폴백: 카카오계정 로그인(Chrome Custom Tab)
+      //   (노트8 등 테스트 기기에 카카오톡 계정이 없으면 "앱직통 강제"가 테스트 자체를 막음)
+      // NOTE: 이 레포(@react-native-seoul/kakao-login v5.4.x)에서는
+      // loginWithKakaoTalk/loginWithKakaoAccount API가 노출되지 않는 빌드가 있어,
+      // `login()` 단일 경로로 진행합니다.
+      // Kakao SDK 내부에서 가능한 경우 카카오톡 앱을 우선 사용하고, 필요 시 계정 로그인으로 폴백합니다.
       const token = await kakaoNativeLogin();
       const accessToken: string | undefined = (token as any)?.accessToken;
       if (!accessToken) {
@@ -90,10 +116,15 @@ export default function Step3() {
       /**
        * token.accessToken ← 이게 핵심
        */
-      await loginWithSocial({
-        provider: 'KAKAO',
-        accessToken,
-      });
+      try {
+        await loginWithSocial({
+          provider: 'KAKAO',
+          accessToken,
+        });
+      } catch (e) {
+        Alert.alert('카카오 로그인 실패', formatApiError(e, '소셜 로그인(/auth/social)'));
+        return;
+      }
 
       // 로그인 후: 프로필이 없으면 회원가입 플로우로 유도
       try {
