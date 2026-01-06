@@ -47,9 +47,16 @@ workflows:
           if [ -n "${CM_KEYSTORE_PATH:-}" ] && [ -f "${CM_KEYSTORE_PATH:-}" ]; then
             KEYSTORE_PATH="${CM_KEYSTORE_PATH:-}"
           fi
-          # Some setups expose CM_KEYSTORE_PATH as a directory. If so, look for KEYSTORE_FILE inside it.
-          if [ -z "$KEYSTORE_PATH" ] && [ -n "${CM_KEYSTORE_PATH:-}" ] && [ -d "${CM_KEYSTORE_PATH:-}" ] && [ -f "${CM_KEYSTORE_PATH:-}/$KEYSTORE_FILE" ]; then
-            KEYSTORE_PATH="${CM_KEYSTORE_PATH:-}/$KEYSTORE_FILE"
+          # Some setups expose CM_KEYSTORE_PATH as a directory. If so, list it and locate a .jks inside.
+          if [ -z "$KEYSTORE_PATH" ] && [ -n "${CM_KEYSTORE_PATH:-}" ] && [ -d "${CM_KEYSTORE_PATH:-}" ]; then
+            echo "CM_KEYSTORE_PATH is a directory; listing:"
+            ls -la "${CM_KEYSTORE_PATH:-}" || true
+            # Prefer the expected KEYSTORE_FILE name if present, otherwise pick the first *.jks.
+            if [ -n "${KEYSTORE_FILE:-}" ] && [ -f "${CM_KEYSTORE_PATH:-}/$KEYSTORE_FILE" ]; then
+              KEYSTORE_PATH="${CM_KEYSTORE_PATH:-}/$KEYSTORE_FILE"
+            else
+              KEYSTORE_PATH="$(find "${CM_KEYSTORE_PATH:-}" -maxdepth 2 -type f -name '*.jks' 2>/dev/null | head -n 1 || true)"
+            fi
           fi
 
           # 2) Secure files
