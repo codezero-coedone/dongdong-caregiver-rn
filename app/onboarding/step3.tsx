@@ -29,6 +29,8 @@ export default function Step3() {
   const setLoggedIn = useAuthStore((s) => s.login);
   const completeSignup = useAuthStore((s) => s.completeSignup);
 
+  const devtoolsEnabled = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+
   const formatApiError = (e: unknown, label: string): string => {
     const ax = e as AxiosError;
     const status = (ax as any)?.response?.status;
@@ -46,41 +48,41 @@ export default function Step3() {
     return `${label} 실패: ${String((e as any)?.message || e)}`.trim();
   };
 
+  const userFacingFailMessage = (label: string): string => {
+    // Keep UX clean; route all details to DBG overlay only.
+    return `${label}에 실패했습니다.\n잠시 후 다시 시도해 주세요.${devtoolsEnabled ? '\n(상세는 DBG에서 확인)' : ''}`;
+  };
+
   const formatKakaoError = (e: unknown): string => {
     const raw = (e as any)?.message ? String((e as any).message) : String(e);
 
     if (/network error/i.test(raw) || /timeout/i.test(raw)) {
       return (
-        '네트워크 오류로 서버에 연결할 수 없습니다.\n\n' +
-        '확인:\n' +
-        `- EXPO_PUBLIC_API_URL = ${getApiBaseUrl()}\n` +
-        `- 서버 헬스체크: ${getApiBaseUrl()}${API_HEALTH_PATH}\n` +
-        '- 안드로이드에서 HTTP(비TLS) 차단이 걸리면 Network Error가 날 수 있습니다.\n' +
-        '  (해결: 다음 빌드부터 usesCleartextTraffic=true 강제 적용)\n' +
-        '- 모바일 데이터/와이파이 환경에서 api.dongdong.io 접속 가능 여부'
+        '네트워크 문제로 로그인에 실패했습니다.\n' +
+        '연결 상태를 확인한 뒤 다시 시도해 주세요.' +
+        (devtoolsEnabled ? '\n(상세는 DBG에서 확인)' : '')
       );
     }
 
     // Native SDK error (Kakao Developers Android key hash mismatch)
     if (/keyhash/i.test(raw)) {
       return (
-        'Android keyhash가 Kakao Developers 콘솔에 등록되지 않았습니다.\n\n' +
-        '조치:\n' +
-        '- Kakao Developers > 내 애플리케이션 > 플랫폼(Android)\n' +
-        '- 패키지: kr.slicemind.dongdong.caregiver\n' +
-        '- 현재 설치 채널(Play 내부테스트/사이드로드)에 맞는 keyhash를 추가 등록\n\n' +
-        '등록 후 앱을 재설치(Play 내부테스트 링크)하고 다시 시도해 주세요.'
+        '카카오 로그인 설정이 완료되지 않아 로그인에 실패했습니다.\n' +
+        '설정 확인 후 다시 시도해 주세요.' +
+        (devtoolsEnabled ? '\n(상세는 DBG에서 확인)' : '')
       );
     }
 
     if (/kakao/i.test(raw) && /appkey/i.test(raw)) {
       return (
-        '카카오 앱키(AppKey)가 앱에 주입되지 않았습니다.\n\n' +
-        '빌드 시 EXPO_PUBLIC_KAKAO_APP_KEY(=6800df...)가 설정되어야 합니다.'
+        '카카오 로그인 설정이 완료되지 않아 로그인에 실패했습니다.\n' +
+        '설정 확인 후 다시 시도해 주세요.' +
+        (devtoolsEnabled ? '\n(상세는 DBG에서 확인)' : '')
       );
     }
 
-    return raw || '카카오 로그인에 실패했습니다.';
+    // Never expose raw exception class names/stack-ish messages in UI.
+    return `카카오 로그인에 실패했습니다.${devtoolsEnabled ? '\n(상세는 DBG에서 확인)' : ''}`;
   };
 
   /**
@@ -156,9 +158,10 @@ export default function Step3() {
           meta: {
             status: (e as any)?.response?.status,
             message: (e as any)?.response?.data?.message || (e as any)?.message,
+            detail: formatApiError(e, '소셜 로그인(/auth/social)'),
           },
         });
-        Alert.alert('카카오 로그인 실패', formatApiError(e, '소셜 로그인(/auth/social)'));
+        Alert.alert('로그인 실패', userFacingFailMessage('로그인'));
         return;
       }
 
@@ -200,13 +203,15 @@ export default function Step3() {
       try {
         const health = await pingHealth();
         if (!health.ok) {
+          devlog({
+            scope: 'KAKAO',
+            level: 'error',
+            message: 'preflight health: FAIL',
+            meta: { ...health, base: getApiBaseUrl() },
+          });
           Alert.alert(
-            '카카오 로그인 실패',
-            formatKakaoError(
-              new Error(
-                `서버 연결 실패(${health.reason}). base=${getApiBaseUrl()} (health=${getApiBaseUrl()}${API_HEALTH_PATH})`,
-              ),
-            ),
+            '로그인 실패',
+            formatKakaoError(e),
           );
         } else {
           Alert.alert('카카오 로그인 실패', formatKakaoError(e));
