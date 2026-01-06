@@ -169,14 +169,48 @@ export default function SignupInfoScreen() {
 
     try {
       const result = await requestPhoneVerification(phone);
-      if (result.success) {
-        setIsVerificationSent(true);
-        setTimer(180); // 3 minutes
-        Alert.alert('알림', result.message);
+      if (!result.success) {
+        Alert.alert('오류', result.message || '인증번호 발송에 실패했습니다.');
+        return;
       }
+      setIsVerificationSent(true);
+      setTimer(180); // 3 minutes
+      // DEV convenience: if backend returns "(DEV 코드: 1234)", auto-fill the code so QA can proceed fast.
+      const m = String(result.message || '').match(/DEV\s*코드:\s*(\d{4})/);
+      if (m && m[1]) setVerificationCode(m[1]);
+      Alert.alert('알림', result.message);
     } catch (error) {
       Alert.alert('오류', '인증번호 발송에 실패했습니다.');
     }
+  };
+
+  const proceedToTermsIfValid = async () => {
+    const triggerAll = isDomestic ? domesticForm.trigger : foreignerForm.trigger;
+    const ok = await triggerAll();
+    if (!ok) return;
+    if (isDomestic) {
+      const data = domesticForm.getValues();
+      setSignupInfo({
+        name: data.name,
+        rrnFront: data.rrnFront,
+        rrnBack: data.rrnBack,
+        phone: data.phone,
+        isDomestic: true,
+      });
+    } else {
+      const data = foreignerForm.getValues();
+      setSignupInfo({
+        koreanName: data.koreanName,
+        englishName: data.englishName,
+        foreignRegFront: data.foreignRegFront,
+        foreignRegBack: data.foreignRegBack,
+        visaType: data.visaType,
+        visaExpiryDate: data.visaExpiryDate,
+        phone: data.phone,
+        isDomestic: false,
+      });
+    }
+    router.replace('/signup/terms');
   };
 
   const handleVerifyCode = async () => {
@@ -189,7 +223,15 @@ export default function SignupInfoScreen() {
       if (result.success) {
         setIsVerified(true);
         setTimer(0);
-        Alert.alert('알림', result.message);
+        // UX: user expects "확인" to move forward. After OK, validate once and go next if possible.
+        Alert.alert('알림', result.message, [
+          {
+            text: '확인',
+            onPress: () => {
+              void proceedToTermsIfValid();
+            },
+          },
+        ]);
       } else {
         Alert.alert('오류', result.message);
       }
@@ -606,11 +648,9 @@ export default function SignupInfoScreen() {
                 ? domesticForm.handleSubmit(onDomesticSubmit)
                 : foreignerForm.handleSubmit(onForeignerSubmit)
             }
-            disabled={
-              isDomestic
-                ? !domesticForm.formState.isValid
-                : !foreignerForm.formState.isValid
-            }
+            // Allow press to surface validation errors instead of looking "stuck"
+            // when formState.isValid is false (e.g. untouched fields with mode='onBlur').
+            disabled={false}
           />
         )}
       </View>
