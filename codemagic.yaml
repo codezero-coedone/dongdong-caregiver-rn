@@ -38,10 +38,18 @@ workflows:
           cd "$APP_DIR/android"
           # Resolve keystore file path robustly (Codemagic can expose it via different mechanisms).
           KEYSTORE_PATH=""
+          echo "KEYSTORE_FILE=${KEYSTORE_FILE:-}"
+          echo "CM_KEYSTORE_PATH=${CM_KEYSTORE_PATH:-}"
+          echo "CM_SECURE_FILES_PATH=${CM_SECURE_FILES_PATH:-}"
+          echo "CM_BUILD_DIR=${CM_BUILD_DIR:-}"
 
           # 1) Codemagic Android keystore integration (preferred)
           if [ -n "${CM_KEYSTORE_PATH:-}" ] && [ -f "${CM_KEYSTORE_PATH:-}" ]; then
             KEYSTORE_PATH="${CM_KEYSTORE_PATH:-}"
+          fi
+          # Some setups expose CM_KEYSTORE_PATH as a directory. If so, look for KEYSTORE_FILE inside it.
+          if [ -z "$KEYSTORE_PATH" ] && [ -n "${CM_KEYSTORE_PATH:-}" ] && [ -d "${CM_KEYSTORE_PATH:-}" ] && [ -f "${CM_KEYSTORE_PATH:-}/$KEYSTORE_FILE" ]; then
+            KEYSTORE_PATH="${CM_KEYSTORE_PATH:-}/$KEYSTORE_FILE"
           fi
 
           # 2) Secure files
@@ -65,6 +73,7 @@ workflows:
           test -n "$KEYSTORE_PATH" && test -f "$KEYSTORE_PATH" || (echo "Keystore file not found. Upload a .jks (Android keystore integration or Secure files) and ensure CM_KEYSTORE_PASSWORD is set." && exit 2)
           echo "KEYSTORE_PATH=$KEYSTORE_PATH"
           ls -la "$KEYSTORE_PATH" || true
+          file "$KEYSTORE_PATH" 2>/dev/null || true
 
           # Auto-detect alias to avoid manual mistakes (works when keystore has a single entry).
           KEY_ALIAS="${CM_KEY_ALIAS:-}"
