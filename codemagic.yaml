@@ -25,7 +25,14 @@ workflows:
           git rev-parse HEAD 2>/dev/null || true
           git remote -v 2>/dev/null || true
           echo "============="
-          npm i -g yarn@1.22.22
+          # Yarn install (deterministic, avoid global binary collisions on Codemagic images)
+          if command -v corepack >/dev/null 2>&1; then
+            corepack enable
+            corepack prepare yarn@1.22.22 --activate
+          else
+            npm i -g yarn@1.22.22 --force
+          fi
+          yarn --version
           # IMPORTANT:
           # NODE_ENV is set to "production" for Expo config stability, but we still need devDependencies
           # (e.g. react-native-svg-transformer used by metro.config.js).
