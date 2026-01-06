@@ -19,6 +19,8 @@ export function getApiBaseUrl(): string {
     return API_BASE_URL;
 }
 
+const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+
 export type HealthCheckResult =
     | { ok: true; status: 'ok' }
     | { ok: false; reason: 'NETWORK'; message: string }
@@ -119,18 +121,20 @@ async function refreshAccessToken(): Promise<string | null> {
 // Request interceptor - add auth token if available
 apiClient.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-        // Deterministic request id (local only; do NOT include tokens in logs)
-        const rid = `${Date.now()}-${++seq}`;
-        (config as any).__dd = {
-            rid,
-            startedAt: Date.now(),
-            method: String(config.method || 'get').toUpperCase(),
-            url: String(config.url || ''),
-        };
-        try {
-            config.headers['X-DD-Request-Id'] = rid;
-        } catch {
-            // ignore
+        // DEV-only deterministic request id (never touch prod traffic unless explicitly enabled)
+        if (DEVTOOLS_ENABLED) {
+            const rid = `${Date.now()}-${++seq}`;
+            (config as any).__dd = {
+                rid,
+                startedAt: Date.now(),
+                method: String(config.method || 'get').toUpperCase(),
+                url: String(config.url || ''),
+            };
+            try {
+                config.headers['X-DD-Request-Id'] = rid;
+            } catch {
+                // ignore
+            }
         }
 
         // Check if token needs refresh before making request
@@ -156,13 +160,15 @@ apiClient.interceptors.request.use(
         }
 
         // DEV trace (request line only)
-        const dd = (config as any).__dd;
-        devlog({
-            scope: 'API',
-            level: 'info',
-            message: `${dd?.method || 'GET'} ${dd?.url || config.url || ''} → …`,
-            meta: { rid: dd?.rid, method: dd?.method, url: dd?.url },
-        });
+        if (DEVTOOLS_ENABLED) {
+            const dd = (config as any).__dd;
+            devlog({
+                scope: 'API',
+                level: 'info',
+                message: `${dd?.method || 'GET'} ${dd?.url || config.url || ''} → …`,
+                meta: { rid: dd?.rid, method: dd?.method, url: dd?.url },
+            });
+        }
 
         return config;
     },
@@ -176,31 +182,33 @@ apiClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-        const dd = (originalRequest as any)?.__dd;
-        const startedAt = typeof dd?.startedAt === 'number' ? dd.startedAt : undefined;
-        const ms = startedAt ? Date.now() - startedAt : undefined;
-        const status = (error as any)?.response?.status;
-        const url = dd?.url || originalRequest?.url || '';
-        const method = dd?.method || String(originalRequest?.method || 'get').toUpperCase();
-        const backendMsg =
-            (error as any)?.response?.data?.message ||
-            (error as any)?.response?.data?.error ||
-            '';
+        if (DEVTOOLS_ENABLED) {
+            const dd = (originalRequest as any)?.__dd;
+            const startedAt = typeof dd?.startedAt === 'number' ? dd.startedAt : undefined;
+            const ms = startedAt ? Date.now() - startedAt : undefined;
+            const status = (error as any)?.response?.status;
+            const url = dd?.url || originalRequest?.url || '';
+            const method = dd?.method || String(originalRequest?.method || 'get').toUpperCase();
+            const backendMsg =
+                (error as any)?.response?.data?.message ||
+                (error as any)?.response?.data?.error ||
+                '';
 
-        if (typeof status === 'number') {
-            devlog({
-                scope: 'API',
-                level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
-                message: `${method} ${url} → ${status}${typeof ms === 'number' ? ` (${ms}ms)` : ''}${backendMsg ? ` | ${String(backendMsg)}` : ''}`,
-                meta: { rid: dd?.rid, method, url, status, ms },
-            });
-        } else {
-            devlog({
-                scope: 'API',
-                level: 'error',
-                message: `${method} ${url} → NETWORK${typeof ms === 'number' ? ` (${ms}ms)` : ''} | ${String((error as any)?.message || error)}`,
-                meta: { rid: dd?.rid, method, url, ms },
-            });
+            if (typeof status === 'number') {
+                devlog({
+                    scope: 'API',
+                    level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
+                    message: `${method} ${url} → ${status}${typeof ms === 'number' ? ` (${ms}ms)` : ''}${backendMsg ? ` | ${String(backendMsg)}` : ''}`,
+                    meta: { rid: dd?.rid, method, url, status, ms },
+                });
+            } else {
+                devlog({
+                    scope: 'API',
+                    level: 'error',
+                    message: `${method} ${url} → NETWORK${typeof ms === 'number' ? ` (${ms}ms)` : ''} | ${String((error as any)?.message || error)}`,
+                    meta: { rid: dd?.rid, method, url, ms },
+                });
+            }
         }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
