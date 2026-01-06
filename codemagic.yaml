@@ -12,6 +12,10 @@ workflows:
       vars:
         APP_DIR: .
         NODE_ENV: "production"
+        # Versioning (prevent Play upload failures due to non-increasing versionCode)
+        # - Always publish with a high, monotonic versionCode derived from CM_BUILD_NUMBER.
+        # - Safe even if you previously uploaded smaller versionCodes (e.g. 1~100).
+        VC_BASE: 100000
         # Public app config (keep builds deterministic even if Codemagic UI vars are missing)
         EXPO_PUBLIC_API_URL: "http://api.dongdong.io:3000/api/v1"
         EXPO_PUBLIC_KAKAO_APP_KEY: "6800df07055f12ec3dd904c9db31e1dd"
@@ -43,6 +47,22 @@ workflows:
           export YARN_PRODUCTION=false
           yarn install --frozen-lockfile --ignore-engines --production=false
           node -e "require('./metro.config.js'); console.log('[ci] metro.config.js OK')" || exit 2
+      - name: Set Android versionCode (CI monotonic)
+        script: |
+          cd "$APP_DIR"
+          node -e "
+            const fs=require('fs');
+            const p='./app.json';
+            const j=JSON.parse(fs.readFileSync(p,'utf8'));
+            const base=Number(process.env.VC_BASE||100000);
+            const n=Number(process.env.CM_BUILD_NUMBER||0);
+            const vc=base + (Number.isFinite(n)&&n>0?n:1);
+            j.expo=j.expo||{};
+            j.expo.android=j.expo.android||{};
+            j.expo.android.versionCode=vc;
+            fs.writeFileSync(p, JSON.stringify(j,null,2)+'\\n');
+            console.log('[ci] android.versionCode='+vc);
+          "
       - name: Expo prebuild (android)
         script: |
           cd "$APP_DIR"
