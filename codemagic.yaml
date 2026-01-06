@@ -155,4 +155,6 @@ workflows:
         credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
         # Internal testing track
         track: internal
+        # Play Console can require draft releases while the app is still in "draft" state.
+        submit_as_draft: true
 
