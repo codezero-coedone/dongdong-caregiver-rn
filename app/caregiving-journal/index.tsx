@@ -168,7 +168,7 @@ export default function CaregivingJournalHome() {
       const res = await api.get('/jobs');
       const raw = (res as any)?.data;
       const jobs = unwrapData<any>(raw);
-      const list: any[] = Array.isArray(jobs)
+      const jobsList: any[] = Array.isArray(jobs)
         ? jobs
         : Array.isArray((jobs as any)?.items)
           ? (jobs as any).items
@@ -178,7 +178,8 @@ export default function CaregivingJournalHome() {
               ? (jobs as any).data
               : [];
 
-      const first = list[0] && typeof list[0] === 'object' ? (list[0] as any) : null;
+      const first =
+        jobsList[0] && typeof jobsList[0] === 'object' ? (jobsList[0] as any) : null;
       const idRaw = first ? (first.id ?? first.jobId ?? first.requestId) : null;
       const jobId = typeof idRaw === 'string' ? idRaw.trim() : idRaw != null ? String(idRaw) : '';
       if (!jobId) {
@@ -188,7 +189,7 @@ export default function CaregivingJournalHome() {
           message: 'seed match: no job id',
           meta: {
             shape: typeof jobs,
-            listCount: list.length,
+            listCount: jobsList.length,
             firstKeys: first ? Object.keys(first).slice(0, 20) : [],
           },
         });
@@ -203,14 +204,14 @@ export default function CaregivingJournalHome() {
       setLoadingMatches(true);
       const mres = await api.get('/my/matches');
       const data = unwrapData<MyMatch[]>((mres as any)?.data);
-      const list = Array.isArray(data) ? data : [];
-      setMatches(list);
-      setSelectedMatchId(list.length > 0 ? list[0].id : null);
+      const matchesList = Array.isArray(data) ? data : [];
+      setMatches(matchesList);
+      setSelectedMatchId(matchesList.length > 0 ? matchesList[0].id : null);
       devlog({
         scope: 'SYS',
         level: 'info',
-        message: `seed match: matches count=${list.length}`,
-        meta: { count: list.length, ids: list.slice(0, 5).map((m) => m.id) },
+        message: `seed match: matches count=${matchesList.length}`,
+        meta: { count: matchesList.length, ids: matchesList.slice(0, 5).map((m) => m.id) },
       });
     } catch (e: any) {
       devlog({
