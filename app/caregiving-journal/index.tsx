@@ -178,19 +178,46 @@ export default function CaregivingJournalHome() {
               ? (jobs as any).data
               : [];
 
+      if (jobsList.length === 0) {
+        devlog({
+          scope: 'SYS',
+          level: 'warn',
+          message: 'seed match: no jobs (0)',
+          meta: { jobsKeys: jobs && typeof jobs === 'object' ? Object.keys(jobs).slice(0, 30) : [] },
+        });
+        return;
+      }
+
       const first =
         jobsList[0] && typeof jobsList[0] === 'object' ? (jobsList[0] as any) : null;
-      const idRaw = first ? (first.id ?? first.jobId ?? first.requestId) : null;
+      const idRaw = first
+        ? (first.id ??
+          first.jobId ??
+          first.requestId ??
+          first.request_id ??
+          first.careRequestId ??
+          first.care_request_id)
+        : null;
       const jobId = typeof idRaw === 'string' ? idRaw.trim() : idRaw != null ? String(idRaw) : '';
       if (!jobId) {
         devlog({
           scope: 'SYS',
           level: 'warn',
-          message: 'seed match: no job id',
+          message: 'seed match: no job id (missing id field)',
           meta: {
             shape: typeof jobs,
             listCount: jobsList.length,
             firstKeys: first ? Object.keys(first).slice(0, 20) : [],
+            idCandidates: first
+              ? {
+                  id: first.id,
+                  jobId: first.jobId,
+                  requestId: first.requestId,
+                  request_id: first.request_id,
+                  careRequestId: first.careRequestId,
+                  care_request_id: first.care_request_id,
+                }
+              : {},
           },
         });
         return;
@@ -218,6 +245,85 @@ export default function CaregivingJournalHome() {
         scope: 'SYS',
         level: 'error',
         message: 'seed match: failed',
+        meta: { status: e?.response?.status, message: e?.response?.data?.message || e?.message },
+      });
+    } finally {
+      setLoadingMatches(false);
+    }
+  }, []);
+
+  const seedMatchByCreatingRequest = useCallback(async () => {
+    if (!DEVTOOLS_ENABLED) return;
+    // ============================================
+    // SEALED DEV LEVER (v0.1) — DO NOT SHIP TO STORE
+    // ============================================
+    // Purpose: /jobs 가 비어있는 DEV 환경에서 T7 선행조건(matchId)을 확정적으로 생성.
+    // Flow: POST /patients -> POST /care-requests -> POST /jobs/:id/apply -> GET /my/matches
+    try {
+      devlog({ scope: 'SYS', level: 'info', message: 'seed match(v2): start' });
+
+      // 1) Create patient (minimal required fields)
+      const now = new Date();
+      const birth = '1950-01-15';
+      const patientRes = await api.post('/patients', {
+        name: `DEV 환자`,
+        birthDate: birth,
+        gender: 'MALE',
+        mobilityLevel: 'PARTIAL_ASSIST',
+        diagnosis: 'DEV',
+        notes: 'DEV seed',
+      });
+      const patient = unwrapData<any>((patientRes as any)?.data);
+      const patientId = typeof patient?.id === 'string' ? patient.id : String(patient?.id || '');
+      if (!patientId) {
+        devlog({ scope: 'SYS', level: 'error', message: 'seed match(v2): patient id missing' });
+        return;
+      }
+      devlog({ scope: 'SYS', level: 'info', message: `seed match(v2): patientId=${patientId}` });
+
+      // 2) Create care request (job)
+      const start = new Date(now.getTime() + 30 * 60 * 1000);
+      const end = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+      const reqRes = await api.post('/care-requests', {
+        patientId,
+        careType: 'HOSPITAL',
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        location: 'DEV 병원',
+        requirements: 'DEV seed',
+        dailyRate: 150000,
+        preferredCaregiverGender: undefined,
+      });
+      const req = unwrapData<any>((reqRes as any)?.data);
+      const jobId = typeof req?.id === 'string' ? req.id : String(req?.id || '');
+      if (!jobId) {
+        devlog({ scope: 'SYS', level: 'error', message: 'seed match(v2): job id missing' });
+        return;
+      }
+      devlog({ scope: 'SYS', level: 'info', message: `seed match(v2): jobId=${jobId}` });
+
+      // 3) Apply (creates match immediately in MVP backend)
+      await api.post(`/jobs/${encodeURIComponent(jobId)}/apply`, { message: null });
+      devlog({ scope: 'SYS', level: 'info', message: 'seed match(v2): apply ok' });
+
+      // 4) Reload matches
+      setLoadingMatches(true);
+      const mres = await api.get('/my/matches');
+      const data = unwrapData<MyMatch[]>((mres as any)?.data);
+      const matchesList = Array.isArray(data) ? data : [];
+      setMatches(matchesList);
+      setSelectedMatchId(matchesList.length > 0 ? matchesList[0].id : null);
+      devlog({
+        scope: 'SYS',
+        level: 'info',
+        message: `seed match(v2): matches count=${matchesList.length}`,
+        meta: { count: matchesList.length, ids: matchesList.slice(0, 5).map((m) => m.id) },
+      });
+    } catch (e: any) {
+      devlog({
+        scope: 'SYS',
+        level: 'error',
+        message: 'seed match(v2): failed',
         meta: { status: e?.response?.status, message: e?.response?.data?.message || e?.message },
       });
     } finally {
@@ -560,9 +666,14 @@ export default function CaregivingJournalHome() {
                 <Text style={styles.ctaBtnGhostText}>홈(공고)로 이동</Text>
               </Pressable>
               {DEVTOOLS_ENABLED && (
-                <Pressable onPress={seedMatchFromFirstJob} style={styles.ctaBtn}>
-                  <Text style={styles.ctaBtnText}>DEV: 첫 공고 자동 지원(매칭 생성)</Text>
-                </Pressable>
+                <>
+                  <Pressable onPress={seedMatchFromFirstJob} style={styles.ctaBtn}>
+                    <Text style={styles.ctaBtnText}>DEV: 첫 공고 자동 지원(매칭 생성)</Text>
+                  </Pressable>
+                  <Pressable onPress={seedMatchByCreatingRequest} style={styles.ctaBtn}>
+                    <Text style={styles.ctaBtnText}>DEV: 환자+공고+매칭 자동 생성</Text>
+                  </Pressable>
+                </>
               )}
             </View>
           )}
