@@ -3,10 +3,11 @@ import * as Camera from 'expo-camera';
 import * as Contacts from 'expo-contacts';
 import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
 
 // Define permission types
 type PermissionItemProps = {
@@ -33,6 +34,36 @@ const PermissionItem = ({ icon, title, description, isOptional = false }: Permis
 
 export default function PermissionScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ next?: string }>();
+  const nextRaw = typeof params.next === 'string' ? params.next : '';
+
+  const nextPath = (() => {
+    const p = String(nextRaw || '').trim();
+    // Deterministic safety: only allow in-app absolute paths (no scheme, no traversal).
+    if (!p.startsWith('/')) return '/onboarding/step3';
+    if (p.includes('://')) return '/onboarding/step3';
+    return p;
+  })();
+
+  // 1-time gate: if already completed, skip immediately.
+  useEffect(() => {
+    let mounted = true;
+    const run = async () => {
+      try {
+        const v = await SecureStore.getItemAsync('onboarding_permission_complete');
+        if (!mounted) return;
+        if (v === '1' || v === 'true') {
+          router.replace(nextPath);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void run();
+    return () => {
+      mounted = false;
+    };
+  }, [router, nextPath]);
 
   const requestPermissions = async () => {
     try {
@@ -57,7 +88,13 @@ export default function PermissionScreen() {
       // but for an "Agreement" screen, usually we just proceed or show a "Go to Settings" dialog.
 
       // For demonstration, we'll just navigate.
-      router.replace('/');
+      // Mark permission step as completed (1-time gate)
+      try {
+        await SecureStore.setItemAsync('onboarding_permission_complete', '1');
+      } catch {
+        // ignore
+      }
+      router.replace(nextPath);
 
     } catch (error) {
       console.error('Permission request error:', error);

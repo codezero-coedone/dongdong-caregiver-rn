@@ -147,7 +147,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!rootNavigationState?.key) return;
     if (!hydrated) return;
-    const inAuthGroup = segments[0] === 'onboarding';
+    const inAuthGroup = segments[0] === 'onboarding' || segments[0] === 'permission';
     const inSignupGroup = segments[0] === 'signup';
 
     if (!isLoggedIn && !inAuthGroup) {

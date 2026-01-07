@@ -23,7 +23,7 @@ export default function Index() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="다음"
-          onPress={() => router.push('/onboarding/step3')}
+          onPress={() => router.push('/permission?next=/onboarding/step3')}
           style={StyleSheet.absoluteFill}
         />
         {/* 타이틀 */}
