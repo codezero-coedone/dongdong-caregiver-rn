@@ -179,7 +179,26 @@ apiClient.interceptors.request.use(
 
 // Response interceptor - handle common errors and token refresh
 apiClient.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        if (DEVTOOLS_ENABLED) {
+            try {
+                const dd = (response.config as any)?.__dd;
+                const startedAt = typeof dd?.startedAt === 'number' ? dd.startedAt : undefined;
+                const ms = startedAt ? Date.now() - startedAt : undefined;
+                const url = dd?.url || response.config.url || '';
+                const method = dd?.method || String(response.config.method || 'get').toUpperCase();
+                devlog({
+                    scope: 'API',
+                    level: 'info',
+                    message: `${method} ${url} → ${response.status}${typeof ms === 'number' ? ` (${ms}ms)` : ''}`,
+                    meta: { rid: dd?.rid, method, url, status: response.status, ms },
+                });
+            } catch {
+                // ignore
+            }
+        }
+        return response;
+    },
     async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
         if (DEVTOOLS_ENABLED) {

@@ -1,4 +1,5 @@
 import api from '@/services/apiClient';
+import { devlog } from '@/services/devlog';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -59,6 +60,8 @@ type JournalDetail = {
   updatedAt: string;
 };
 
+const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+
 function unwrapData<T>(resData: unknown): T {
   const anyRes = resData as any;
   if (anyRes && typeof anyRes === 'object' && 'data' in anyRes) {
@@ -114,10 +117,19 @@ export default function CaregivingJournalHome() {
         const res = await api.get('/my/matches');
         const data = unwrapData<MyMatch[]>((res as any)?.data);
         if (!alive) return;
-        setMatches(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        setMatches(list);
+        if (DEVTOOLS_ENABLED) {
+          devlog({
+            scope: 'SYS',
+            level: 'info',
+            message: `matches loaded: count=${list.length}`,
+            meta: { count: list.length, ids: list.slice(0, 5).map((m) => m.id) },
+          });
+        }
         setSelectedMatchId((prev) => {
           if (typeof prev === 'number') return prev;
-          return Array.isArray(data) && data.length > 0 ? data[0].id : null;
+          return list.length > 0 ? list[0].id : null;
         });
       } catch (e: any) {
         if (!alive) return;
@@ -126,6 +138,14 @@ export default function CaregivingJournalHome() {
         );
         setMatches([]);
         setSelectedMatchId(null);
+        if (DEVTOOLS_ENABLED) {
+          devlog({
+            scope: 'SYS',
+            level: 'warn',
+            message: `matches load failed`,
+            meta: { status: e?.response?.status, message: e?.response?.data?.message || e?.message },
+          });
+        }
       } finally {
         if (alive) setLoadingMatches(false);
       }
@@ -133,6 +153,46 @@ export default function CaregivingJournalHome() {
     return () => {
       alive = false;
     };
+  }, []);
+
+  const seedMatchFromFirstJob = useCallback(async () => {
+    if (!DEVTOOLS_ENABLED) return;
+    try {
+      devlog({ scope: 'SYS', level: 'info', message: 'seed match: start' });
+      const res = await api.get('/jobs');
+      const jobs = unwrapData<any[]>((res as any)?.data);
+      const first = Array.isArray(jobs) ? jobs[0] : null;
+      const jobId = first && typeof first === 'object' ? Number((first as any).id) : NaN;
+      if (!Number.isFinite(jobId)) {
+        devlog({ scope: 'SYS', level: 'warn', message: 'seed match: no job id' });
+        return;
+      }
+      devlog({ scope: 'SYS', level: 'info', message: `seed match: apply jobId=${jobId}` });
+      await api.post(`/jobs/${jobId}/apply`);
+      devlog({ scope: 'SYS', level: 'info', message: 'seed match: apply ok' });
+      // Reload matches
+      setLoadingMatches(true);
+      const mres = await api.get('/my/matches');
+      const data = unwrapData<MyMatch[]>((mres as any)?.data);
+      const list = Array.isArray(data) ? data : [];
+      setMatches(list);
+      setSelectedMatchId(list.length > 0 ? list[0].id : null);
+      devlog({
+        scope: 'SYS',
+        level: 'info',
+        message: `seed match: matches count=${list.length}`,
+        meta: { count: list.length, ids: list.slice(0, 5).map((m) => m.id) },
+      });
+    } catch (e: any) {
+      devlog({
+        scope: 'SYS',
+        level: 'error',
+        message: 'seed match: failed',
+        meta: { status: e?.response?.status, message: e?.response?.data?.message || e?.message },
+      });
+    } finally {
+      setLoadingMatches(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -436,6 +496,17 @@ export default function CaregivingJournalHome() {
               <Text style={styles.emptyText}>
                 아직 매칭이 없습니다. 공고에 지원하면 매칭이 생성되고 일지를 작성할 수 있습니다.
               </Text>
+              <Pressable
+                onPress={() => router.replace('/(tabs)')}
+                style={[styles.ctaBtn, styles.ctaBtnGhost]}
+              >
+                <Text style={styles.ctaBtnGhostText}>홈(공고)로 이동</Text>
+              </Pressable>
+              {DEVTOOLS_ENABLED && (
+                <Pressable onPress={seedMatchFromFirstJob} style={styles.ctaBtn}>
+                  <Text style={styles.ctaBtnText}>DEV: 첫 공고 자동 지원(매칭 생성)</Text>
+                </Pressable>
+              )}
             </View>
           )}
         </View>
@@ -500,6 +571,21 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 12 },
   section: { marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 10 },
+  ctaBtn: {
+    marginTop: 10,
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  ctaBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  ctaBtnGhost: {
+    backgroundColor: 'rgba(37,99,235,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(37,99,235,0.25)',
+  },
+  ctaBtnGhostText: { color: '#1D4ED8', fontWeight: '800', fontSize: 13 },
 
   matchRow: { flexDirection: 'row', gap: 10, paddingRight: 10 },
   matchChip: {
