@@ -180,9 +180,6 @@ components/
     ├── DateSelector.tsx               # 날짜 선택
     ├── JournalCard.tsx                # 일지 카드 (아침/점심/저녁 등)
     └── SpecialNotesInput.tsx          # 특이사항 입력
-
-store/
-└── journalStore.ts                    # 간병일지 상태 관리
 ```
 
 ---

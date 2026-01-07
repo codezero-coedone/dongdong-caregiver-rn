@@ -1,11 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type {
-  ActivityRecord,
-  MealRecord,
-  MedicalRecord,
-} from '../../store/journalStore';
+
+type CountNote = { count: number; note?: string };
+type Status = 'caution' | 'normal' | 'good';
+
+export type MealRecord = {
+  status: Status;
+  mealType: string;
+  urination: CountNote;
+  bowelMovement: CountNote;
+  diaperUsage?: number;
+  mobility?: string;
+  careNotes?: string;
+};
+
+export type MedicalRecord = {
+  types: string[];
+  otherNotes?: string;
+};
+
+export type ActivityRecord = {
+  exercise: Status;
+  sleep: Status;
+  otherNotes?: string;
+};
 
 type JournalCardType = 'morning' | 'lunch' | 'dinner' | 'medical' | 'activity';
 
@@ -34,7 +53,7 @@ const isMealRecord = (
 const isMedicalRecord = (
   data: MealRecord | MedicalRecord | ActivityRecord | undefined,
 ): data is MedicalRecord => {
-  return data !== undefined && 'injection' in data;
+  return data !== undefined && 'types' in data;
 };
 
 // Type guard for ActivityRecord
