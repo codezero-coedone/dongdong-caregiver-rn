@@ -16,6 +16,7 @@ import '../global.css'; // Import global CSS for NativeWind
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { QueryProvider } from '@/services/QueryProvider';
+import { hasValidTokens } from '@/services/tokenService';
 import { useAuthStore } from '@/store/authStore';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -120,6 +121,7 @@ export default function RootLayout() {
 
   const rootNavigationState = useRootNavigationState();
   const [hydrated, setHydrated] = useState<boolean>(false);
+  const [tokenChecked, setTokenChecked] = useState<boolean>(false);
 
   // Persist hydration gate:
   // - Redirect logic must wait until persisted auth state is loaded,
@@ -147,6 +149,25 @@ export default function RootLayout() {
   useEffect(() => {
     if (!rootNavigationState?.key) return;
     if (!hydrated) return;
+    if (!tokenChecked) {
+      setTokenChecked(true);
+      // If persisted routing flags survived an update but SecureStore tokens did not,
+      // the app may "think" it's logged in and immediately call protected endpoints (e.g. /jobs) → 401.
+      // Fail closed: if isLoggedIn but tokens are missing, force logout and go to onboarding.
+      (async () => {
+        try {
+          if (!isLoggedIn) return;
+          const ok = await hasValidTokens();
+          if (ok) return;
+          useAuthStore.getState().logout();
+          setTimeout(() => router.replace('/onboarding'), 0);
+        } catch {
+          // If token validation fails for any reason, treat session as invalid.
+          useAuthStore.getState().logout();
+          setTimeout(() => router.replace('/onboarding'), 0);
+        }
+      })();
+    }
     const inAuthGroup = segments[0] === 'onboarding' || segments[0] === 'permission';
     const inSignupGroup = segments[0] === 'signup';
 
@@ -164,7 +185,14 @@ export default function RootLayout() {
       // Redirect to home if logged in and signup complete, but still in auth screens
       setTimeout(() => router.replace('/'), 0);
     }
-  }, [hydrated, isLoggedIn, isSignupComplete, segments, rootNavigationState?.key]);
+  }, [
+    hydrated,
+    tokenChecked,
+    isLoggedIn,
+    isSignupComplete,
+    segments,
+    rootNavigationState?.key,
+  ]);
 
   if (needsUpdate) {
     return (
