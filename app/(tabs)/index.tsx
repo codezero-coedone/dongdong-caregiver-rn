@@ -5,10 +5,13 @@ import HeaderWithLogo from '@/components/ui/HeaderWithLogo';
 import Space from '@/components/ui/Space';
 import Typography from '@/components/ui/Typography';
 import { apiClient } from '@/services/apiClient';
+import { useAuthStore } from '@/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -242,6 +245,7 @@ export default function HomeScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [sortOption, setSortOption] = useState('latest');
   const [apiJobs, setApiJobs] = useState<ApiJobListing[]>([]);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
   const careTypeLabel = (v: string | null | undefined): string => {
     switch (v) {
@@ -282,6 +286,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     let alive = true;
+    if (!isLoggedIn) {
+      // Guard: never call protected endpoints before auth is established.
+      setApiJobs([]);
+      return () => {
+        alive = false;
+      };
+    }
     (async () => {
       try {
         const res = await apiClient.get('/jobs');
@@ -296,7 +307,7 @@ export default function HomeScreen() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [isLoggedIn]);
 
   const handleApplyFilters = (filters: any) => {
     console.log('Applied filters:', filters);
@@ -325,27 +336,40 @@ export default function HomeScreen() {
       {/* Header */}
       <HeaderWithLogo />
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Title */}
-        <Typography
-          variant="headline1.bold"
-          color="strong"
-          style={styles.title}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ paddingBottom: 140 }}
         >
-          매칭 공고를 확인해보세요.
-        </Typography>
+          {/* Title */}
+          <Typography
+            variant="headline1.bold"
+            color="strong"
+            style={styles.title}
+          >
+            매칭 공고를 확인해보세요.
+          </Typography>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#9CA3AF" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="장소 또는 공고번호 검색하기"
-            placeholderTextColor="#9CA3AF"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="장소 또는 공고번호 검색하기"
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+          </View>
 
         {/* Filter Bar */}
         <View style={styles.filterBar}>
@@ -396,19 +420,20 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Job List */}
-        <View style={styles.jobList}>
-          {jobsForUi.length > 0 ? (
-            jobsForUi.map((job) => <JobCard key={job.id} job={job} />)
-          ) : (
-            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-              <Text style={{ color: '#6B7280' }}>
-                현재 지원 가능한 공고가 없습니다.
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
+          {/* Job List */}
+          <View style={styles.jobList}>
+            {jobsForUi.length > 0 ? (
+              jobsForUi.map((job) => <JobCard key={job.id} job={job} />)
+            ) : (
+              <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                <Text style={{ color: '#6B7280' }}>
+                  현재 지원 가능한 공고가 없습니다.
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Floating Help Button */}
       <TouchableOpacity style={styles.helpButton}>

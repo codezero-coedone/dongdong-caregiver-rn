@@ -39,6 +39,7 @@ export default function MyScreen() {
   const [ongoingMatch, setOngoingMatch] = useState<any | null>(null);
   const [reviewPreview, setReviewPreview] = useState<any[]>([]);
   const logout = useAuthStore((s) => s.logout);
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
 
   const handleLogout = () => {
     Alert.alert(
@@ -81,6 +82,17 @@ export default function MyScreen() {
     let alive = true;
     setLoadingMy(true);
     setMyError(null);
+    if (!isLoggedIn) {
+      // Guard: never call protected endpoints before auth is established.
+      setProfile(null);
+      setMyMatches([]);
+      setOngoingMatch(null);
+      setReviewPreview([]);
+      setLoadingMy(false);
+      return () => {
+        alive = false;
+      };
+    }
     (async () => {
       try {
         const profRes = await api.get('/caregivers/profile');
@@ -123,7 +135,7 @@ export default function MyScreen() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [isLoggedIn]);
 
   const user = useMemo(() => {
     if (!profile) return DEFAULT_USER;

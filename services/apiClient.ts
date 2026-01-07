@@ -80,6 +80,23 @@ function onTokenRefreshed(newToken: string | null) {
     refreshSubscribers = [];
 }
 
+async function invalidateSession(reason: string) {
+    try {
+        await clearTokens();
+    } catch {
+        // ignore
+    }
+    try {
+        const { useAuthStore } = await import('@/store/authStore');
+        useAuthStore.getState().logout();
+    } catch {
+        // ignore
+    }
+    if (DEVTOOLS_ENABLED) {
+        devlog({ scope: 'SYS', level: 'warn', message: `session invalid (${reason})` });
+    }
+}
+
 /**
  * Refresh the access token using the refresh token
  */
@@ -140,15 +157,32 @@ apiClient.interceptors.request.use(
         // Check if token needs refresh before making request
         const expired = await isTokenExpired();
 
-        if (expired && !isRefreshing) {
-            isRefreshing = true;
-            const newToken = await refreshAccessToken();
-            isRefreshing = false;
-
-            if (newToken) {
+        if (expired) {
+            // If a refresh is already in-flight, wait for it and never send a request without a valid token.
+            if (isRefreshing) {
+                const waited = await new Promise<string | null>((resolve) => {
+                    subscribeToTokenRefresh(resolve);
+                });
+                if (!waited) {
+                    await invalidateSession('refresh_failed(wait)');
+                    const err: any = new Error('DD_SESSION_EXPIRED');
+                    err.code = 'DD_SESSION_EXPIRED';
+                    return Promise.reject(err);
+                }
+                config.headers.Authorization = `Bearer ${waited}`;
+            } else {
+                isRefreshing = true;
+                const newToken = await refreshAccessToken();
+                isRefreshing = false;
                 onTokenRefreshed(newToken);
+
+                if (!newToken) {
+                    await invalidateSession('refresh_failed');
+                    const err: any = new Error('DD_SESSION_EXPIRED');
+                    err.code = 'DD_SESSION_EXPIRED';
+                    return Promise.reject(err);
+                }
                 config.headers.Authorization = `Bearer ${newToken}`;
-                return config;
             }
         }
 

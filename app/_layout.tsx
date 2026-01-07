@@ -150,13 +150,13 @@ export default function RootLayout() {
   const updateUrl = getUpdateUrl();
   const needsUpdate = compareSemver(appVersion, minVersion) < 0;
 
+  // 1) Token validity gate (must complete BEFORE mounting tabs)
   useEffect(() => {
     if (!rootNavigationState?.key) return;
     if (!hydrated) return;
     let cancelled = false;
-    // If persisted routing flags survived an update but SecureStore tokens did not,
-    // the app may "think" it's logged in and immediately call protected endpoints (e.g. /jobs) → 401.
-    // Fail closed: validate tokens BEFORE mounting tabs.
+    setAuthReady(false);
+
     (async () => {
       try {
         if (!isLoggedIn) return;
@@ -164,50 +164,45 @@ export default function RootLayout() {
         if (ok) return;
         await clearTokens();
         useAuthStore.getState().logout();
-        setTimeout(() => router.replace('/onboarding'), 0);
       } catch {
-        // If token validation fails for any reason, treat session as invalid.
         try {
           await clearTokens();
         } catch {
           // ignore
         }
         useAuthStore.getState().logout();
-        setTimeout(() => router.replace('/onboarding'), 0);
       } finally {
         if (!cancelled) setAuthReady(true);
       }
     })();
+
     if (!isLoggedIn) setAuthReady(true);
     return () => {
       cancelled = true;
     };
+  }, [hydrated, isLoggedIn, rootNavigationState?.key]);
+
+  // 2) Deterministic route guard (runs after authReady)
+  useEffect(() => {
+    if (!rootNavigationState?.key) return;
+    if (!hydrated) return;
+    if (!authReady) return;
+
     const inAuthGroup = segments[0] === 'onboarding' || segments[0] === 'permission';
     const inSignupGroup = segments[0] === 'signup';
 
-    if (!authReady) return;
     if (!isLoggedIn && !inAuthGroup) {
-      // Redirect to onboarding if not logged in and not already in onboarding
       setTimeout(() => router.replace('/onboarding'), 0);
-    } else if (isLoggedIn && !isSignupComplete && !inSignupGroup) {
-      // Redirect to signup info if logged in but signup not complete
+      return;
+    }
+    if (isLoggedIn && !isSignupComplete && !inSignupGroup) {
       setTimeout(() => router.replace('/signup/info'), 0);
-    } else if (
-      isLoggedIn &&
-      isSignupComplete &&
-      (inAuthGroup || inSignupGroup)
-    ) {
-      // Redirect to home if logged in and signup complete, but still in auth screens
+      return;
+    }
+    if (isLoggedIn && isSignupComplete && (inAuthGroup || inSignupGroup)) {
       setTimeout(() => router.replace('/'), 0);
     }
-  }, [
-    hydrated,
-    authReady,
-    isLoggedIn,
-    isSignupComplete,
-    segments,
-    rootNavigationState?.key,
-  ]);
+  }, [hydrated, authReady, isLoggedIn, isSignupComplete, segments, rootNavigationState?.key]);
 
   if (needsUpdate) {
     return (
