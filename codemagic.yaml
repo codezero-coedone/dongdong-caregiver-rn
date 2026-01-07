@@ -70,9 +70,9 @@ workflows:
             // - Two apps must both increment by +1 each build (vc+1 x2).
             // - Codemagic build number is monotonic per app, so versionCode := VC_BASE + CM_BUILD_NUMBER.
             const base=Number(process.env.VC_BASE||0);
-            const bn=Number(process.env.CM_BUILD_NUMBER||0);
+            const bn=Number(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||0);
             if (!(Number.isFinite(base) && base>0)) throw new Error('invalid VC_BASE='+base);
-            if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid CM_BUILD_NUMBER='+bn);
+            if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid BUILD_NUMBER='+String(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||''));
             const vc=base + bn;
             if (!(Number.isFinite(vc) && vc > 0 && vc < 2100000000)) throw new Error('invalid versionCode='+vc);
             j.expo=j.expo||{};
@@ -333,9 +333,9 @@ workflows:
             const p='./app.json';
             const j=JSON.parse(fs.readFileSync(p,'utf8'));
             const base=Number(process.env.VC_BASE||0);
-            const bn=Number(process.env.CM_BUILD_NUMBER||0);
+            const bn=Number(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||0);
             if (!(Number.isFinite(base) && base>0)) throw new Error('invalid VC_BASE='+base);
-            if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid CM_BUILD_NUMBER='+bn);
+            if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid BUILD_NUMBER='+String(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||''));
             const vc=base + bn;
             j.expo=j.expo||{};
             j.expo.android=j.expo.android||{};
@@ -467,9 +467,9 @@ workflows:
             const p='./app.json';
             const j=JSON.parse(fs.readFileSync(p,'utf8'));
             const base=Number(process.env.VC_BASE||0);
-            const bn=Number(process.env.CM_BUILD_NUMBER||0);
+            const bn=Number(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||0);
             if (!(Number.isFinite(base) && base>0)) throw new Error('invalid VC_BASE='+base);
-            if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid CM_BUILD_NUMBER='+bn);
+            if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid BUILD_NUMBER='+String(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||''));
             const vc=base + bn;
             j.expo=j.expo||{};
             j.expo.android=j.expo.android||{};
