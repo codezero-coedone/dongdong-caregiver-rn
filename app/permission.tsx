@@ -8,6 +8,7 @@ import React, { useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
+import { devlog } from '@/services/devlog';
 
 // Define permission types
 type PermissionItemProps = {
@@ -36,6 +37,7 @@ export default function PermissionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ next?: string }>();
   const nextRaw = typeof params.next === 'string' ? params.next : '';
+  const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
 
   const nextPath = (() => {
     const p = String(nextRaw || '').trim();
@@ -66,40 +68,77 @@ export default function PermissionScreen() {
   }, [router, nextPath]);
 
   const requestPermissions = async () => {
+    // Policy:
+    // - Permissions are optional for DEV flow (we must never block progress).
+    // - Some Expo permission APIs can throw depending on OS/vendor quirks.
+    // - Always log details to DEV TRACE (when enabled) and continue.
+    const results: Record<string, string> = {};
+    let hadError = false;
+
+    const safeStatus = (s: any) => (typeof s === 'string' && s ? s : 'unknown');
+    const safeErr = (e: any) =>
+      String(e?.message || e?.nativeEvent?.message || e?.toString?.() || e || 'error');
+
+    // 1) Location
     try {
-      // 1. Location
-      const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
-
-      // 2. Camera
-      const { status: cameraStatus } = await Camera.requestCameraPermissionsAsync();
-
-      // 3. Media Library (Storage)
-      const { status: mediaStatus } = await MediaLibrary.requestPermissionsAsync();
-
-      // 4. Contacts
-      const { status: contactsStatus } = await Contacts.requestPermissionsAsync();
-
-      // Note: Bluetooth and Phone permissions are often handled differently or implicitly 
-      // depending on the specific usage (e.g., BLE scanning vs just using system dialer).
-      // For this screen, we are requesting the core explicit permissions available in Expo.
-
-      // After requesting, navigate to the next screen (e.g., Home or Login)
-      // You might want to check statuses and alert the user if critical permissions are denied,
-      // but for an "Agreement" screen, usually we just proceed or show a "Go to Settings" dialog.
-
-      // For demonstration, we'll just navigate.
-      // Mark permission step as completed (1-time gate)
-      try {
-        await SecureStore.setItemAsync('onboarding_permission_complete', '1');
-      } catch {
-        // ignore
-      }
-      router.replace(nextPath);
-
-    } catch (error) {
-      console.error('Permission request error:', error);
-      Alert.alert('오류', '권한 요청 중 오류가 발생했습니다.');
+      const r = await Location.requestForegroundPermissionsAsync();
+      results.location = safeStatus((r as any)?.status);
+    } catch (e) {
+      hadError = true;
+      results.location = `ERR:${safeErr(e)}`;
     }
+
+    // 2) Camera
+    try {
+      const r = await Camera.requestCameraPermissionsAsync();
+      results.camera = safeStatus((r as any)?.status);
+    } catch (e) {
+      hadError = true;
+      results.camera = `ERR:${safeErr(e)}`;
+    }
+
+    // 3) Media Library (Storage)
+    try {
+      const r = await MediaLibrary.requestPermissionsAsync();
+      results.media = safeStatus((r as any)?.status);
+    } catch (e) {
+      hadError = true;
+      results.media = `ERR:${safeErr(e)}`;
+    }
+
+    // 4) Contacts
+    try {
+      const r = await Contacts.requestPermissionsAsync();
+      results.contacts = safeStatus((r as any)?.status);
+    } catch (e) {
+      hadError = true;
+      results.contacts = `ERR:${safeErr(e)}`;
+    }
+
+    if (DEVTOOLS_ENABLED) {
+      devlog({
+        scope: 'SYS',
+        level: hadError ? 'warn' : 'info',
+        message: hadError ? 'permissions: requested (partial error)' : 'permissions: requested',
+        meta: results,
+      });
+    }
+
+    // Mark permission step as completed (1-time gate)
+    try {
+      await SecureStore.setItemAsync('onboarding_permission_complete', '1');
+    } catch {
+      // ignore
+    }
+
+    if (hadError) {
+      Alert.alert(
+        '권한 안내',
+        '일부 권한 요청에 실패했지만 앱은 계속 진행합니다.\n(설정에서 언제든 변경할 수 있어요)',
+      );
+    }
+
+    router.replace(nextPath);
   };
 
   return (
