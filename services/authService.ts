@@ -39,6 +39,18 @@ export async function loginWithSocial(params: {
     refreshToken: refresh_token,
   });
 
+  // Fail-safe: immediately attach token to axios defaults for subsequent calls in this session.
+  // Prevents "auth/social 200 -> next call 401" loops caused by timing/cache issues.
+  try {
+    (apiClient as any).defaults = (apiClient as any).defaults || {};
+    (apiClient as any).defaults.headers = (apiClient as any).defaults.headers || {};
+    (apiClient as any).defaults.headers.common =
+      (apiClient as any).defaults.headers.common || {};
+    (apiClient as any).defaults.headers.common.Authorization = `Bearer ${access_token}`;
+  } catch {
+    // ignore
+  }
+
   return data?.user;
 }
 

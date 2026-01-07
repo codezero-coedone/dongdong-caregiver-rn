@@ -12,6 +12,11 @@ const TOKEN_KEY = 'auth_access_token';
 const REFRESH_TOKEN_KEY = 'auth_refresh_token';
 const TOKEN_EXPIRY_KEY = 'auth_token_expiry';
 
+// In-memory cache (prevents "auth/social 200 -> next call 401" race within the same JS runtime)
+let memAccessToken: string | null = null;
+let memRefreshToken: string | null = null;
+let memExpiryMs: number | null = null;
+
 export interface TokenPayload {
     accessToken: string;
     refreshToken?: string;
@@ -40,6 +45,8 @@ function getExpiryFromJwtMs(token: string): number | null {
  * Save tokens to secure storage
  */
 export async function saveTokens(payload: TokenPayload): Promise<void> {
+    memAccessToken = payload.accessToken;
+    if (payload.refreshToken) memRefreshToken = payload.refreshToken;
     await SecureStore.setItemAsync(TOKEN_KEY, payload.accessToken);
 
     if (payload.refreshToken) {
@@ -55,8 +62,10 @@ export async function saveTokens(payload: TokenPayload): Promise<void> {
             : getExpiryFromJwtMs(payload.accessToken);
 
     if (typeof expiryTime === 'number' && Number.isFinite(expiryTime) && expiryTime > 0) {
+        memExpiryMs = Math.floor(expiryTime);
         await SecureStore.setItemAsync(TOKEN_EXPIRY_KEY, String(Math.floor(expiryTime)));
     } else {
+        memExpiryMs = null;
         // Avoid keeping a stale expiry from an older session.
         await SecureStore.deleteItemAsync(TOKEN_EXPIRY_KEY);
     }
@@ -66,27 +75,37 @@ export async function saveTokens(payload: TokenPayload): Promise<void> {
  * Get access token from secure storage
  */
 export async function getAccessToken(): Promise<string | null> {
-    return SecureStore.getItemAsync(TOKEN_KEY);
+    if (memAccessToken) return memAccessToken;
+    const t = await SecureStore.getItemAsync(TOKEN_KEY);
+    memAccessToken = t;
+    return t;
 }
 
 /**
  * Get refresh token from secure storage
  */
 export async function getRefreshToken(): Promise<string | null> {
-    return SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+    if (memRefreshToken) return memRefreshToken;
+    const t = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+    memRefreshToken = t;
+    return t;
 }
 
 /**
  * Check if access token is expired or about to expire (within 1 minute)
  */
 export async function isTokenExpired(): Promise<boolean> {
-    const expiryStr = await SecureStore.getItemAsync(TOKEN_EXPIRY_KEY);
-
     const bufferTime = 60 * 1000; // 1 minute buffer
 
+    if (typeof memExpiryMs === 'number' && Number.isFinite(memExpiryMs) && memExpiryMs > 0) {
+        return Date.now() >= memExpiryMs - bufferTime;
+    }
+
+    const expiryStr = await SecureStore.getItemAsync(TOKEN_EXPIRY_KEY);
     if (expiryStr) {
         const expiryTime = parseInt(expiryStr, 10);
         if (Number.isFinite(expiryTime) && expiryTime > 0) {
+            memExpiryMs = expiryTime;
             return Date.now() >= expiryTime - bufferTime;
         }
     }
@@ -98,6 +117,7 @@ export async function isTokenExpired(): Promise<boolean> {
     if (typeof expMs !== 'number') return false;
 
     // Cache derived expiry for determinism across the session.
+    memExpiryMs = expMs;
     await SecureStore.setItemAsync(TOKEN_EXPIRY_KEY, String(expMs));
     return Date.now() >= expMs - bufferTime;
 }
@@ -106,6 +126,9 @@ export async function isTokenExpired(): Promise<boolean> {
  * Clear all tokens from secure storage (for logout)
  */
 export async function clearTokens(): Promise<void> {
+    memAccessToken = null;
+    memRefreshToken = null;
+    memExpiryMs = null;
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await SecureStore.deleteItemAsync(TOKEN_EXPIRY_KEY);

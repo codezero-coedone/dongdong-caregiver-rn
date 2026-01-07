@@ -196,11 +196,12 @@ apiClient.interceptors.request.use(
         // DEV trace (request line only)
         if (DEVTOOLS_ENABLED) {
             const dd = (config as any).__dd;
+            const hasAuth = Boolean((config.headers as any)?.Authorization);
             devlog({
                 scope: 'API',
                 level: 'info',
-                message: `[rid=${String(dd?.rid || '')}] ${dd?.method || 'GET'} ${dd?.url || config.url || ''} → …`,
-                meta: { rid: dd?.rid, method: dd?.method, url: dd?.url },
+                message: `[rid=${String(dd?.rid || '')}] ${dd?.method || 'GET'} ${dd?.url || config.url || ''} → …${hasAuth ? '' : ' (no-auth)'}`,
+                meta: { rid: dd?.rid, method: dd?.method, url: dd?.url, hasAuth },
             });
         }
 
