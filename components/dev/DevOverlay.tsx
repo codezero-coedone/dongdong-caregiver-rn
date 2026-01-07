@@ -2,7 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 
-import { clearDevLogs, DevLogEntry, getDevLogs, subscribeDevLogs } from '@/services/devlog';
+import {
+  clearDevLogs,
+  DevLogEntry,
+  getDevLogs,
+  isDevtoolsEnabled,
+  subscribeDevLogs,
+} from '@/services/devlog';
 import { getApiBaseUrl } from '@/services/apiClient';
 
 function fmtTime(ts: number): string {
@@ -17,12 +23,8 @@ function fmtTime(ts: number): string {
   }
 }
 
-function isEnabled(): boolean {
-  return Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
-}
-
 export default function DevOverlay() {
-  const enabled = isEnabled();
+  const enabled = isDevtoolsEnabled();
   const [open, setOpen] = useState<boolean>(false);
   const [logs, setLogs] = useState<DevLogEntry[]>(enabled ? getDevLogs() : []);
 
@@ -142,6 +144,7 @@ const styles = StyleSheet.create({
     top: 48,
     right: 12,
     zIndex: 9999,
+    elevation: 9999,
     backgroundColor: '#111827',
     borderRadius: 12,
     paddingHorizontal: 10,

@@ -6,7 +6,7 @@ import {
   isTokenExpired,
   saveTokens,
 } from './tokenService';
-import { devlog } from './devlog';
+import { devlog, isDevtoolsEnabled } from './devlog';
 
 // Default follows backend SSOT DEV base + prefix.
 // Override by setting EXPO_PUBLIC_API_URL (e.g. http://api.dongdong.io:3000/api/v1)
@@ -19,7 +19,7 @@ export function getApiBaseUrl(): string {
     return API_BASE_URL;
 }
 
-const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
 export type HealthCheckResult =
     | { ok: true; status: 'ok' }

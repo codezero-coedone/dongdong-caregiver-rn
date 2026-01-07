@@ -13,11 +13,23 @@ const MAX_LOGS = 200;
 let buffer: DevLogEntry[] = [];
 const subs = new Set<(logs: DevLogEntry[]) => void>();
 
+import Constants from 'expo-constants';
+
+export function isDevtoolsEnabled(): boolean {
+  // Release builds: __DEV__ is false, and process.env inlining can be flaky depending on build path.
+  // We use a 2nd deterministic gate via app config extra.devtools.
+  if (__DEV__) return true;
+  if (process.env.EXPO_PUBLIC_DEVTOOLS === '1') return true;
+  const extra =
+    (Constants as any)?.expoConfig?.extra ||
+    (Constants as any)?.manifest?.extra ||
+    {};
+  return Boolean((extra as any)?.devtools === true);
+}
+
 function enabled(): boolean {
   // NOTE: Never enable in production builds by default.
-  // For store builds, turn on explicitly only if needed:
-  // - EXPO_PUBLIC_DEVTOOLS=1
-  return Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+  return isDevtoolsEnabled();
 }
 
 function snapshot(): DevLogEntry[] {

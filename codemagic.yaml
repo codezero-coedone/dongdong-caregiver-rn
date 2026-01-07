@@ -475,6 +475,8 @@ workflows:
             const vc=base + bn;
             j.expo=j.expo||{};
             j.expo.android=j.expo.android||{};
+            j.expo.extra=j.expo.extra||{};
+            j.expo.extra.devtools=true;
             j.expo.android.package=String(process.env.DEV_ANDROID_PACKAGE||j.expo.android.package);
             j.expo.android.versionCode=vc;
             fs.writeFileSync(p, JSON.stringify(j,null,2)+'\n');
