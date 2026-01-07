@@ -149,6 +149,13 @@ export default function ActivityRecordScreen() {
         { text: '확인', onPress: () => router.back() },
       ]);
     } catch (e: any) {
+      const status = e?.response?.status;
+      if (status === 409) {
+        Alert.alert('수정 불가', '간병 시간이 종료되어 더 이상 수정할 수 없습니다.', [
+          { text: '확인', onPress: () => router.back() },
+        ]);
+        return;
+      }
       const msg = e?.response?.data?.message || e?.message || '저장에 실패했습니다.';
       Alert.alert('오류', String(msg));
     } finally {

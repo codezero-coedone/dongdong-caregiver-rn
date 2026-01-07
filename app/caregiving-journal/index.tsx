@@ -465,6 +465,35 @@ export default function CaregivingJournalHome() {
     );
   };
 
+  const NotesCard = ({ v }: { v: string | undefined }) => {
+    const has = !!v && v.trim().length > 0;
+    return (
+      <Pressable
+        style={styles.card}
+        onPress={() => {
+          if (!selectedMatchId) return;
+          router.push(
+            `/caregiving-journal/new?matchId=${String(
+              selectedMatchId,
+            )}&date=${encodeURIComponent(selectedDate)}`,
+          );
+        }}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>특이사항</Text>
+          <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+        </View>
+        {has ? (
+          <Text style={styles.medicalNote} numberOfLines={3}>
+            {v!.trim()}
+          </Text>
+        ) : (
+          <Text style={styles.cardEmptyText}>특이사항을 작성해주세요.</Text>
+        )}
+      </Pressable>
+    );
+  };
+
   if (loadingMatches) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -561,6 +590,7 @@ export default function CaregivingJournalHome() {
             />
             <MedicalCard v={journal?.medicalRecord} />
             <ActivityCard v={journal?.activityRecord} />
+            <NotesCard v={journal?.notes} />
           </View>
         )}
       </ScrollView>
