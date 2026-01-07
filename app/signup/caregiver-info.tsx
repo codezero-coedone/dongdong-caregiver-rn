@@ -13,15 +13,36 @@ import Input from '../../components/ui/Input';
 import MaskedRRNInput from '../../components/ui/MaskedRRNInput';
 import WarningBanner from '../../components/ui/WarningBanner';
 
+const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+
 // Zod Schema
-const caregiverInfoSchema = z.object({
-  name: z.string().min(1, '이름을 입력해주세요.'),
-  rrnFront: z.string().length(6, '주민등록번호 앞자리 6자리를 입력해주세요.'),
-  rrnBack: z.string().length(7, '주민등록번호 뒷자리 7자리를 입력해주세요.'),
-  phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
-  address: z.string().min(1, '주소를 입력해주세요.'),
-  addressDetail: z.string().optional(),
-});
+const caregiverInfoSchema = z
+  .object({
+    name: z.string().min(1, '이름을 입력해주세요.'),
+    rrnFront: z.string().optional(),
+    rrnBack: z.string().optional(),
+    phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
+    address: z.string().min(1, '주소를 입력해주세요.'),
+    addressDetail: z.string().optional(),
+  })
+  .superRefine((val, ctx) => {
+    // DEVTOOLS=1 레일에서는 PII(주민번호) 강제 입력을 걷어낸다.
+    if (DEVTOOLS_ENABLED) return;
+    if (!val.rrnFront || String(val.rrnFront).length !== 6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rrnFront'],
+        message: '주민등록번호 앞자리 6자리를 입력해주세요.',
+      });
+    }
+    if (!val.rrnBack || String(val.rrnBack).length !== 7) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rrnBack'],
+        message: '주민등록번호 뒷자리 7자리를 입력해주세요.',
+      });
+    }
+  });
 
 type CaregiverFormData = z.infer<typeof caregiverInfoSchema>;
 
@@ -101,12 +122,12 @@ export default function CaregiverInfoScreen() {
   const onSubmit = (data: CaregiverFormData) => {
     const caregiverData: CaregiverInfo = {
       name: data.name,
-      rrnFront: data.rrnFront,
-      rrnBack: data.rrnBack,
       phone: data.phone,
       address: data.address,
       addressDetail: data.addressDetail || '',
-      criminalRecordFile,
+      rrnFront: DEVTOOLS_ENABLED ? undefined : data.rrnFront,
+      rrnBack: DEVTOOLS_ENABLED ? undefined : data.rrnBack,
+      criminalRecordFile: DEVTOOLS_ENABLED ? null : criminalRecordFile,
     };
 
     setCaregiverInfo(caregiverData);
@@ -163,49 +184,51 @@ export default function CaregiverInfoScreen() {
           />
         </View>
 
-        {/* ID Number Field */}
-        <View className="mb-5">
-          <Text
-            className="mb-2 text-sm font-semibold"
-            style={{
-              color: 'rgba(46,47,51,0.88)',
-              lineHeight: 20,
-              letterSpacing: 0.2,
-            }}
-          >
-            {isDomestic ? '주민등록번호' : '외국인등록번호'}
-          </Text>
-          <View className="flex-row items-center">
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="rrnFront"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    containerClassName="flex-1 mb-0"
-                    placeholder={isDomestic ? '801225' : '800515'}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.rrnFront?.message}
-                  />
-                )}
-              />
-            </View>
-            <Text className="mx-2 text-gray-400">-</Text>
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="rrnBack"
-                render={({ field: { onChange, value } }) => (
-                  <MaskedRRNInput value={value} onChangeText={onChange} />
-                )}
-              />
+        {/* ID Number Field (PII) */}
+        {!DEVTOOLS_ENABLED && (
+          <View className="mb-5">
+            <Text
+              className="mb-2 text-sm font-semibold"
+              style={{
+                color: 'rgba(46,47,51,0.88)',
+                lineHeight: 20,
+                letterSpacing: 0.2,
+              }}
+            >
+              {isDomestic ? '주민등록번호' : '외국인등록번호'}
+            </Text>
+            <View className="flex-row items-center">
+              <View className="flex-1">
+                <Controller
+                  control={control}
+                  name="rrnFront"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      containerClassName="flex-1 mb-0"
+                      placeholder={isDomestic ? '801225' : '800515'}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      error={errors.rrnFront?.message}
+                    />
+                  )}
+                />
+              </View>
+              <Text className="mx-2 text-gray-400">-</Text>
+              <View className="flex-1">
+                <Controller
+                  control={control}
+                  name="rrnBack"
+                  render={({ field: { onChange, value } }) => (
+                    <MaskedRRNInput value={value} onChangeText={onChange} />
+                  )}
+                />
+              </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Phone Field */}
         <View className="mb-5">
@@ -282,20 +305,22 @@ export default function CaregiverInfoScreen() {
           />
         </View>
 
-        {/* Criminal Record File Upload */}
-        <View className="mb-5">
-          <Text
-            className="mb-2 text-sm font-semibold"
-            style={{
-              color: 'rgba(46,47,51,0.88)',
-              lineHeight: 20,
-              letterSpacing: 0.2,
-            }}
-          >
-            범죄경력회보서 (선택)
-          </Text>
-          <FileUploadBox file={criminalRecordFile} onPress={handleFileUpload} />
-        </View>
+        {/* Criminal Record File Upload (PII risk) */}
+        {!DEVTOOLS_ENABLED && (
+          <View className="mb-5">
+            <Text
+              className="mb-2 text-sm font-semibold"
+              style={{
+                color: 'rgba(46,47,51,0.88)',
+                lineHeight: 20,
+                letterSpacing: 0.2,
+              }}
+            >
+              범죄경력회보서 (선택)
+            </Text>
+            <FileUploadBox file={criminalRecordFile} onPress={handleFileUpload} />
+          </View>
+        )}
 
         {/* Referral Code Field */}
         <View className="mb-6">

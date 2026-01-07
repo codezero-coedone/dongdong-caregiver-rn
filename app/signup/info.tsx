@@ -9,6 +9,8 @@ import {
   requestPhoneVerification,
   verifyPhoneCode,
 } from '@/services/authService';
+import { apiClient } from '@/services/apiClient';
+import { devlog } from '@/services/devlog';
 import { useAuthStore } from '@/store/authStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
@@ -17,6 +19,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
+
+const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
 
 // 비자 종류 옵션
 const VISA_TYPES = [
@@ -35,39 +39,110 @@ const VISA_TYPES = [
 const DISALLOWED_VISA_TYPES = ['D-6'];
 
 // 내국인용 Zod Schema
-const domesticSchema = z.object({
-  name: z.string().min(1, '이름을 입력해주세요.'),
-  rrnFront: z.string().length(6, '주민등록번호 앞자리 6자리를 입력해주세요.'),
-  rrnBack: z.string().length(7, '주민등록번호 뒷자리 7자리를 입력해주세요.'),
-  phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
-});
+const domesticSchema = z
+  .object({
+    name: z.string().optional(),
+    rrnFront: z.string().optional(),
+    rrnBack: z.string().optional(),
+    phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
+  })
+  .superRefine((val, ctx) => {
+    // DEVTOOLS=1 레일에서는 PII(주민번호) 강제 입력을 걷어낸다.
+    if (DEVTOOLS_ENABLED) return;
+    if (!val.name || String(val.name).trim().length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['name'],
+        message: '이름을 입력해주세요.',
+      });
+    }
+    if (!val.rrnFront || String(val.rrnFront).length !== 6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rrnFront'],
+        message: '주민등록번호 앞자리 6자리를 입력해주세요.',
+      });
+    }
+    if (!val.rrnBack || String(val.rrnBack).length !== 7) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['rrnBack'],
+        message: '주민등록번호 뒷자리 7자리를 입력해주세요.',
+      });
+    }
+  });
 
 // 외국인용 Zod Schema
-const foreignerSchema = z.object({
-  koreanName: z.string().min(1, '한글 이름을 입력해주세요.'),
-  englishName: z.string().min(1, '영문 이름을 입력해주세요.'),
-  foreignRegFront: z
-    .string()
-    .length(6, '외국인등록번호 앞자리 6자리를 입력해주세요.'),
-  foreignRegBack: z
-    .string()
-    .length(7, '외국인등록번호 뒷자리 7자리를 입력해주세요.'),
-  visaType: z
-    .string()
-    .min(1, '비자 종류를 선택해주세요.')
-    .refine((val) => !DISALLOWED_VISA_TYPES.includes(val), {
-      message: '가입할 수 없는 비자입니다.',
-    }),
-  visaExpiryDate: z.string().min(1, '비자 만료일을 선택해주세요.'),
-  phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
-});
+const foreignerSchema = z
+  .object({
+    koreanName: z.string().optional(),
+    englishName: z.string().optional(),
+    foreignRegFront: z.string().optional(),
+    foreignRegBack: z.string().optional(),
+    visaType: z.string().optional(),
+    visaExpiryDate: z.string().optional(),
+    phone: z.string().min(10, '올바른 휴대폰 번호를 입력해주세요.'),
+  })
+  .superRefine((val, ctx) => {
+    // DEVTOOLS=1 레일에서는 PII(외국인등록번호/비자정보) 강제 입력을 걷어낸다.
+    if (DEVTOOLS_ENABLED) return;
+    if (!val.koreanName || String(val.koreanName).trim().length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['koreanName'],
+        message: '한글 이름을 입력해주세요.',
+      });
+    }
+    if (!val.englishName || String(val.englishName).trim().length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['englishName'],
+        message: '영문 이름을 입력해주세요.',
+      });
+    }
+    if (!val.foreignRegFront || String(val.foreignRegFront).length !== 6) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['foreignRegFront'],
+        message: '외국인등록번호 앞자리 6자리를 입력해주세요.',
+      });
+    }
+    if (!val.foreignRegBack || String(val.foreignRegBack).length !== 7) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['foreignRegBack'],
+        message: '외국인등록번호 뒷자리 7자리를 입력해주세요.',
+      });
+    }
+    const visaType = String(val.visaType || '').trim();
+    if (!visaType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['visaType'],
+        message: '비자 종류를 선택해주세요.',
+      });
+    } else if (DISALLOWED_VISA_TYPES.includes(visaType)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['visaType'],
+        message: '가입할 수 없는 비자입니다.',
+      });
+    }
+    if (!val.visaExpiryDate || String(val.visaExpiryDate).trim().length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['visaExpiryDate'],
+        message: '비자 만료일을 선택해주세요.',
+      });
+    }
+  });
 
 type DomesticFormData = z.infer<typeof domesticSchema>;
 type ForeignerFormData = z.infer<typeof foreignerSchema>;
 
 export default function SignupInfoScreen() {
   const router = useRouter();
-  const { setSignupInfo, signupInfo } = useAuthStore();
+  const { setSignupInfo, signupInfo, completeSignup } = useAuthStore();
   const [isDomestic, setIsDomestic] = useState(signupInfo?.isDomestic ?? true);
 
   // 내국인용 React Hook Form
@@ -234,6 +309,58 @@ export default function SignupInfoScreen() {
     }
   };
 
+  const devBootstrapMinimalProfileAndGoJournal = async () => {
+    if (!DEVTOOLS_ENABLED) return;
+    if (!isVerified) {
+      Alert.alert('알림', '휴대폰 인증을 먼저 완료해주세요.');
+      return;
+    }
+    try {
+      const digits = String(phone || '').replace(/[^\d]/g, '');
+      if (digits.length < 10) {
+        Alert.alert('알림', '올바른 휴대폰 번호를 입력해주세요.');
+        return;
+      }
+
+      // Persist minimal signup info (PII 최소)
+      setSignupInfo({ phone: digits, isDomestic: true });
+
+      const payload = {
+        phone: digits,
+        // v0.1 DEV 레일: 주소는 필수이므로 기본값으로 채우고, 이후 프로필 편집에서 수정 가능.
+        address: '서울특별시',
+        experienceYears: 0,
+      };
+
+      devlog({
+        scope: 'SYS',
+        level: 'info',
+        message: 'DEV fast-lane: create caregiver profile (PII minimized)',
+        meta: { phone: digits, address: payload.address },
+      });
+
+      try {
+        await apiClient.post('/caregivers/profile', payload);
+      } catch (e: any) {
+        const status = e?.response?.status;
+        if (status === 409) {
+          await apiClient.put('/caregivers/profile', payload);
+        } else {
+          throw e;
+        }
+      }
+
+      completeSignup();
+      router.replace('/caregiving-journal');
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        'DEV fast-lane(최소 가입)에 실패했습니다.';
+      Alert.alert('오류', String(msg));
+    }
+  };
+
   const onDomesticSubmit = (data: DomesticFormData) => {
     if (!isVerified) {
       Alert.alert('알림', '휴대폰 인증을 완료해주세요.');
@@ -311,7 +438,7 @@ export default function SignupInfoScreen() {
                   letterSpacing: 0.2,
                 }}
               >
-                이름 <Text style={{ color: '#EF4444' }}>*</Text>
+                이름 {!DEVTOOLS_ENABLED && <Text style={{ color: '#EF4444' }}>*</Text>}
               </Text>
 
               <Controller
@@ -332,58 +459,60 @@ export default function SignupInfoScreen() {
               />
             </View>
 
-            <View className="mb-5">
-              <Text
-                className="mb-2 text-sm font-semibold"
-                style={{
-                  color: 'rgba(46,47,51,0.88)',
-                  lineHeight: 20,
-                  letterSpacing: 0.2,
-                }}
-              >
-                주민등록번호 <Text style={{ color: '#EF4444' }}>*</Text>
-              </Text>
-
-              <View className="flex-row items-center">
-                <View className="flex-1">
-                  <Controller
-                    control={domesticForm.control}
-                    name="rrnFront"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                      <Input
-                        containerClassName="flex-1 mb-0"
-                        placeholder="801232"
-                        keyboardType="number-pad"
-                        maxLength={6}
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        error={domesticForm.formState.errors.rrnFront?.message}
-                      />
-                    )}
-                  />
-                </View>
+            {!DEVTOOLS_ENABLED && (
+              <View className="mb-5">
                 <Text
+                  className="mb-2 text-sm font-semibold"
                   style={{
-                    marginHorizontal: 8,
-                    fontSize: 16,
-                    lineHeight: 24,
-                    color: 'rgba(112,115,124,0.48)',
+                    color: 'rgba(46,47,51,0.88)',
+                    lineHeight: 20,
+                    letterSpacing: 0.2,
                   }}
                 >
-                  -
+                  주민등록번호 <Text style={{ color: '#EF4444' }}>*</Text>
                 </Text>
-                <View className="flex-1">
-                  <Controller
-                    control={domesticForm.control}
-                    name="rrnBack"
-                    render={({ field: { onChange, value } }) => (
-                      <MaskedRRNInput value={value} onChangeText={onChange} />
-                    )}
-                  />
+
+                <View className="flex-row items-center">
+                  <View className="flex-1">
+                    <Controller
+                      control={domesticForm.control}
+                      name="rrnFront"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <Input
+                          containerClassName="flex-1 mb-0"
+                          placeholder="801232"
+                          keyboardType="number-pad"
+                          maxLength={6}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          error={domesticForm.formState.errors.rrnFront?.message}
+                        />
+                      )}
+                    />
+                  </View>
+                  <Text
+                    style={{
+                      marginHorizontal: 8,
+                      fontSize: 16,
+                      lineHeight: 24,
+                      color: 'rgba(112,115,124,0.48)',
+                    }}
+                  >
+                    -
+                  </Text>
+                  <View className="flex-1">
+                    <Controller
+                      control={domesticForm.control}
+                      name="rrnBack"
+                      render={({ field: { onChange, value } }) => (
+                        <MaskedRRNInput value={value} onChangeText={onChange} />
+                      )}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
 
             <View className="mb-5">
               <Text
@@ -422,7 +551,7 @@ export default function SignupInfoScreen() {
           <>
             <View className="mb-4">
               <Text className="mb-2 text-sm font-bold text-gray-800">
-                한글 이름 <Text style={{ color: '#EF4444' }}>*</Text>
+                한글 이름 {!DEVTOOLS_ENABLED && <Text style={{ color: '#EF4444' }}>*</Text>}
               </Text>
               <Controller
                 control={foreignerForm.control}
@@ -446,7 +575,7 @@ export default function SignupInfoScreen() {
 
             <View className="mb-4">
               <Text className="mb-2 text-sm font-bold text-gray-800">
-                영문 이름 <Text style={{ color: '#EF4444' }}>*</Text>
+                영문 이름 {!DEVTOOLS_ENABLED && <Text style={{ color: '#EF4444' }}>*</Text>}
               </Text>
               <Controller
                 control={foreignerForm.control}
@@ -468,78 +597,84 @@ export default function SignupInfoScreen() {
               />
             </View>
 
-            <View className="mb-4">
-              <Text className="mb-2 text-sm font-bold text-gray-800">
-                외국인등록번호 <Text style={{ color: '#EF4444' }}>*</Text>
-              </Text>
-              <View className="flex-row items-center">
+            {!DEVTOOLS_ENABLED && (
+              <View className="mb-4">
+                <Text className="mb-2 text-sm font-bold text-gray-800">
+                  외국인등록번호 <Text style={{ color: '#EF4444' }}>*</Text>
+                </Text>
+                <View className="flex-row items-center">
+                  <Controller
+                    control={foreignerForm.control}
+                    name="foreignRegFront"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input
+                        containerClassName="flex-1 mb-0"
+                        placeholder="801232"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        error={
+                          foreignerForm.formState.errors.foreignRegFront?.message
+                        }
+                        isValid={
+                          value.length === 6 &&
+                          !foreignerForm.formState.errors.foreignRegFront
+                        }
+                      />
+                    )}
+                  />
+                  <Text className="mx-2 text-gray-400">-</Text>
+                  <View className="flex-1">
+                    <Controller
+                      control={foreignerForm.control}
+                      name="foreignRegBack"
+                      render={({ field: { onChange, value } }) => (
+                        <MaskedRRNInput value={value} onChangeText={onChange} />
+                      )}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {!DEVTOOLS_ENABLED && (
+              <>
                 <Controller
                   control={foreignerForm.control}
-                  name="foreignRegFront"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <Input
-                      containerClassName="flex-1 mb-0"
-                      placeholder="801232"
-                      keyboardType="number-pad"
-                      maxLength={6}
+                  name="visaType"
+                  render={({ field: { onChange, value } }) => (
+                    <SelectInput
+                      label="비자 종류"
+                      placeholder="선택해주세요."
                       value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      error={
-                        foreignerForm.formState.errors.foreignRegFront?.message
-                      }
-                      isValid={
-                        value.length === 6 &&
-                        !foreignerForm.formState.errors.foreignRegFront
-                      }
+                      options={VISA_TYPES}
+                      onSelect={(val) => {
+                        onChange(val);
+                        // 선택 시 즉시 유효성 검사 트리거
+                        foreignerForm.trigger('visaType');
+                      }}
+                      error={foreignerForm.formState.errors.visaType?.message}
+                      isValid={!!value && !foreignerForm.formState.errors.visaType}
                     />
                   )}
                 />
-                <Text className="mx-2 text-gray-400">-</Text>
-                <View className="flex-1">
-                  <Controller
-                    control={foreignerForm.control}
-                    name="foreignRegBack"
-                    render={({ field: { onChange, value } }) => (
-                      <MaskedRRNInput value={value} onChangeText={onChange} />
-                    )}
-                  />
-                </View>
-              </View>
-            </View>
 
-            <Controller
-              control={foreignerForm.control}
-              name="visaType"
-              render={({ field: { onChange, value } }) => (
-                <SelectInput
-                  label="비자 종류"
-                  placeholder="선택해주세요."
-                  value={value}
-                  options={VISA_TYPES}
-                  onSelect={(val) => {
-                    onChange(val);
-                    // 선택 시 즉시 유효성 검사 트리거
-                    foreignerForm.trigger('visaType');
-                  }}
-                  error={foreignerForm.formState.errors.visaType?.message}
-                  isValid={!!value && !foreignerForm.formState.errors.visaType}
+                <DateInput
+                  label="비자 만료일"
+                  placeholder="yyyy-mm-dd"
+                  value={visaExpiryDateValue}
+                  onChange={handleDateChange}
+                  error={foreignerForm.formState.errors.visaExpiryDate?.message}
+                  isValid={
+                    !!visaExpiryDateValue &&
+                    !foreignerForm.formState.errors.visaExpiryDate
+                  }
+                  minimumDate={new Date()}
                 />
-              )}
-            />
-
-            <DateInput
-              label="비자 만료일"
-              placeholder="yyyy-mm-dd"
-              value={visaExpiryDateValue}
-              onChange={handleDateChange}
-              error={foreignerForm.formState.errors.visaExpiryDate?.message}
-              isValid={
-                !!visaExpiryDateValue &&
-                !foreignerForm.formState.errors.visaExpiryDate
-              }
-              minimumDate={new Date()}
-            />
+              </>
+            )}
 
             <View className="mb-4">
               <Text className="mb-2 text-sm font-bold text-gray-800">
@@ -663,6 +798,13 @@ export default function SignupInfoScreen() {
               }
               disabled={false}
             />
+            {DEVTOOLS_ENABLED && (
+              <Button
+                title="DEV: 최소 가입 후 바로 간병일지"
+                onPress={devBootstrapMinimalProfileAndGoJournal}
+                disabled={false}
+              />
+            )}
           </View>
         )}
       </View>

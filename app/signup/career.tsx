@@ -28,6 +28,8 @@ const CERTIFICATES = [
   { id: 'other', label: '기타 자격증' },
 ];
 
+const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+
 interface CertificateImage {
   uri: string;
   name: string;
@@ -137,7 +139,7 @@ export default function CareerScreen() {
         router.replace('/signup/caregiver-info');
         return;
       }
-      if (idNumber.length !== 13) {
+      if (!DEVTOOLS_ENABLED && idNumber.length !== 13) {
         Alert.alert('알림', '주민/외국인등록번호 13자리를 확인해주세요.');
         router.replace('/signup/info');
         return;
@@ -154,9 +156,13 @@ export default function CareerScreen() {
         addressDetail: caregiverInfo?.addressDetail ?? undefined,
         experienceYears: hasExperience ? 1 : 0,
         licenseType,
-        isForeigner,
-        residentNumber: isForeigner ? undefined : idNumber,
-        foreignerNumber: isForeigner ? idNumber : undefined,
+        ...(DEVTOOLS_ENABLED
+          ? {}
+          : {
+              isForeigner,
+              residentNumber: isForeigner ? undefined : idNumber,
+              foreignerNumber: isForeigner ? idNumber : undefined,
+            }),
       };
 
       try {

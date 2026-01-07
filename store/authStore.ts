@@ -22,11 +22,11 @@ interface SignupInfo {
 
 interface CaregiverInfo {
     name: string;
-    rrnFront: string;
-    rrnBack: string;
+    rrnFront?: string;
+    rrnBack?: string;
     phone: string;
     address: string;
-    addressDetail: string;
+    addressDetail?: string;
     criminalRecordFile?: { uri: string; name: string; mimeType?: string } | null;
 }
 
