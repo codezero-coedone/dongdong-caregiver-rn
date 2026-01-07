@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Keyboard, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { devlog, isDevtoolsEnabled } from '@/services/devlog';
@@ -49,6 +49,8 @@ export default function PermissionScreen() {
 
   // 1-time gate: if already completed, skip immediately.
   useEffect(() => {
+    // UX polish: prevent IME/keyboard UI from leaking into permission screen.
+    Keyboard.dismiss();
     let mounted = true;
     const run = async () => {
       try {

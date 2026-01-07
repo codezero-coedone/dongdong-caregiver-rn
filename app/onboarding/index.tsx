@@ -1,9 +1,15 @@
 import { useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { Image, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Index() {
   const router = useRouter();
+
+  useEffect(() => {
+    // UX polish: ensure no residual IME/keyboard UI leaks into onboarding (e.g. "한글" key at bottom-left).
+    Keyboard.dismiss();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -13,6 +13,7 @@ import * as React from 'react';
 import {
   Alert,
   Image,
+  Keyboard,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,7 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import type { AxiosError } from 'axios';
-import { devlog } from '@/services/devlog';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 
 export default function Step3() {
   const router = useRouter();
@@ -29,7 +30,12 @@ export default function Step3() {
   const setLoggedIn = useAuthStore((s) => s.login);
   const completeSignup = useAuthStore((s) => s.completeSignup);
 
-  const devtoolsEnabled = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+  const devtoolsEnabled = isDevtoolsEnabled();
+
+  React.useEffect(() => {
+    // UX polish: prevent IME/keyboard UI from leaking into onboarding/login screen.
+    Keyboard.dismiss();
+  }, []);
 
   const formatApiError = (e: unknown, label: string): string => {
     const ax = e as AxiosError;

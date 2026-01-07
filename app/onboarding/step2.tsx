@@ -1,10 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect } from 'react';
+import { Image, Keyboard, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Index() {
   const router = useRouter();
+
+  useEffect(() => {
+    // UX polish: prevent IME/keyboard UI from leaking into onboarding screens.
+    Keyboard.dismiss();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
