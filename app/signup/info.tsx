@@ -184,10 +184,10 @@ export default function SignupInfoScreen() {
     }
   };
 
-  const proceedToTermsIfValid = async () => {
+  const proceedToTermsIfValid = async (): Promise<boolean> => {
     const triggerAll = isDomestic ? domesticForm.trigger : foreignerForm.trigger;
     const ok = await triggerAll();
-    if (!ok) return;
+    if (!ok) return false;
     if (isDomestic) {
       const data = domesticForm.getValues();
       setSignupInfo({
@@ -211,6 +211,7 @@ export default function SignupInfoScreen() {
       });
     }
     router.replace('/signup/terms');
+    return true;
   };
 
   const handleVerifyCode = async () => {
@@ -223,15 +224,11 @@ export default function SignupInfoScreen() {
       if (result.success) {
         setIsVerified(true);
         setTimer(0);
-        // UX: user expects "확인" to move forward. After OK, validate once and go next if possible.
-        Alert.alert('알림', result.message, [
-          {
-            text: '확인',
-            onPress: () => {
-              void proceedToTermsIfValid();
-            },
-          },
-        ]);
+        // UX: 인증 성공 = 즉시 다음 화면 진입(추측/추가 탭 최소화)
+        const moved = await proceedToTermsIfValid();
+        if (!moved) {
+          Alert.alert('알림', '인증이 완료되었습니다.\n입력 정보를 확인해 주세요.');
+        }
       } else {
         Alert.alert('오류', result.message);
       }

@@ -1,4 +1,3 @@
-import Button from '@/components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -48,13 +47,7 @@ export default function Index() {
 
         <View style={{ flex: 1 }} />
 
-        {/* 버튼 */}
-        <View style={styles.buttonWrapper}>
-          <Button
-            title="다음"
-            onPress={() => router.push('/onboarding/step3')}
-          />
-        </View>
+        {/* CTA 제거: 화면 탭으로 자연스럽게 진행 */}
       </View>
     </SafeAreaView>
   );
@@ -119,7 +112,4 @@ const styles = StyleSheet.create({
     height: 120,
   },
 
-  buttonWrapper: {
-    width: '100%',
-  },
 });
