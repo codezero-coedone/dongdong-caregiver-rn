@@ -640,7 +640,7 @@ export default function SignupInfoScreen() {
           />
         ) : (
           <Button
-            title="다음"
+            title="계속"
             onPress={
               isDomestic
                 ? domesticForm.handleSubmit(onDomesticSubmit)

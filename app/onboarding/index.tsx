@@ -19,7 +19,7 @@ export default function Index() {
         {/* UX: tap anywhere to proceed (button still works) */}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="다음"
+          accessibilityLabel="계속"
           onPress={() => router.push('/onboarding/step2')}
           style={StyleSheet.absoluteFill}
         />

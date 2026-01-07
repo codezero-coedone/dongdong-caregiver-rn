@@ -330,9 +330,9 @@ export default function CareerScreen() {
         </View>
       </ScrollView>
 
-      {/* 다음 버튼 */}
+      {/* 계속 버튼 */}
       <View style={styles.buttonContainer}>
-        <Button title="다음" onPress={handleSubmit} />
+        <Button title="계속" onPress={handleSubmit} />
       </View>
     </SafeAreaView>
   );
