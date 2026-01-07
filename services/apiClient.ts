@@ -62,20 +62,20 @@ export async function pingHealth(): Promise<HealthCheckResult> {
 
 // Flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshSubscribers: ((token: string | null) => void)[] = [];
 let seq = 0;
 
 /**
  * Add subscriber to be notified when token refresh completes
  */
-function subscribeToTokenRefresh(callback: (token: string) => void) {
+function subscribeToTokenRefresh(callback: (token: string | null) => void) {
     refreshSubscribers.push(callback);
 }
 
 /**
  * Notify all subscribers that token has been refreshed
  */
-function onTokenRefreshed(newToken: string) {
+function onTokenRefreshed(newToken: string | null) {
     refreshSubscribers.forEach(callback => callback(newToken));
     refreshSubscribers = [];
 }
@@ -235,8 +235,12 @@ apiClient.interceptors.response.use(
 
             if (isRefreshing) {
                 // Wait for ongoing refresh to complete
-                return new Promise((resolve) => {
-                    subscribeToTokenRefresh((newToken: string) => {
+                return new Promise((resolve, reject) => {
+                    subscribeToTokenRefresh((newToken: string | null) => {
+                        if (!newToken) {
+                            reject(error);
+                            return;
+                        }
                         originalRequest.headers.Authorization = `Bearer ${newToken}`;
                         resolve(apiClient(originalRequest));
                     });
@@ -257,6 +261,8 @@ apiClient.interceptors.response.use(
 
             // Refresh failed - clear auth state
             console.log('[API] Unauthorized - session expired, redirecting to login');
+            onTokenRefreshed(null);
+            await clearTokens();
 
             // Import dynamically to avoid circular dependency
             const { useAuthStore } = await import('@/store/authStore');

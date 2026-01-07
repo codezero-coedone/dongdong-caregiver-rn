@@ -18,6 +18,24 @@ export interface TokenPayload {
     expiresIn?: number; // seconds until expiry
 }
 
+function normalizeBase64(b64: string): string {
+    const s = String(b64 || '').replace(/-/g, '+').replace(/_/g, '/');
+    const pad = s.length % 4;
+    return pad ? s + '='.repeat(4 - pad) : s;
+}
+
+function getExpiryFromJwtMs(token: string): number | null {
+    try {
+        const payload = decodeJwtPayload(token);
+        const exp = (payload as any)?.exp;
+        const n = typeof exp === 'string' ? Number(exp) : exp;
+        if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) return null;
+        return Math.floor(n * 1000);
+    } catch {
+        return null;
+    }
+}
+
 /**
  * Save tokens to secure storage
  */
@@ -28,10 +46,19 @@ export async function saveTokens(payload: TokenPayload): Promise<void> {
         await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, payload.refreshToken);
     }
 
-    if (payload.expiresIn) {
-        // Store expiry time as timestamp
-        const expiryTime = Date.now() + payload.expiresIn * 1000;
-        await SecureStore.setItemAsync(TOKEN_EXPIRY_KEY, expiryTime.toString());
+    // Store expiry time as timestamp
+    // - Prefer backend expiresIn
+    // - Fallback to JWT exp claim (seconds since epoch)
+    const expiryTime =
+        typeof payload.expiresIn === 'number' && Number.isFinite(payload.expiresIn) && payload.expiresIn > 0
+            ? Date.now() + payload.expiresIn * 1000
+            : getExpiryFromJwtMs(payload.accessToken);
+
+    if (typeof expiryTime === 'number' && Number.isFinite(expiryTime) && expiryTime > 0) {
+        await SecureStore.setItemAsync(TOKEN_EXPIRY_KEY, String(Math.floor(expiryTime)));
+    } else {
+        // Avoid keeping a stale expiry from an older session.
+        await SecureStore.deleteItemAsync(TOKEN_EXPIRY_KEY);
     }
 }
 
@@ -55,15 +82,24 @@ export async function getRefreshToken(): Promise<string | null> {
 export async function isTokenExpired(): Promise<boolean> {
     const expiryStr = await SecureStore.getItemAsync(TOKEN_EXPIRY_KEY);
 
-    if (!expiryStr) {
-        // No expiry stored, assume not expired
-        return false;
-    }
-
-    const expiryTime = parseInt(expiryStr, 10);
     const bufferTime = 60 * 1000; // 1 minute buffer
 
-    return Date.now() >= expiryTime - bufferTime;
+    if (expiryStr) {
+        const expiryTime = parseInt(expiryStr, 10);
+        if (Number.isFinite(expiryTime) && expiryTime > 0) {
+            return Date.now() >= expiryTime - bufferTime;
+        }
+    }
+
+    // Fallback: derive expiry from JWT exp if available.
+    const token = await getAccessToken();
+    if (!token) return false;
+    const expMs = getExpiryFromJwtMs(token);
+    if (typeof expMs !== 'number') return false;
+
+    // Cache derived expiry for determinism across the session.
+    await SecureStore.setItemAsync(TOKEN_EXPIRY_KEY, String(expMs));
+    return Date.now() >= expMs - bufferTime;
 }
 
 /**
@@ -102,7 +138,7 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
         if (parts.length !== 3) return null;
 
         const payload = parts[1];
-        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        const decoded = atob(normalizeBase64(payload));
         return JSON.parse(decoded);
     } catch {
         return null;

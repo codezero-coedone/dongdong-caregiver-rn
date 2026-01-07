@@ -16,7 +16,7 @@ import '../global.css'; // Import global CSS for NativeWind
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { QueryProvider } from '@/services/QueryProvider';
-import { hasValidTokens } from '@/services/tokenService';
+import { clearTokens, hasValidTokens } from '@/services/tokenService';
 import { useAuthStore } from '@/store/authStore';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -121,7 +121,11 @@ export default function RootLayout() {
 
   const rootNavigationState = useRootNavigationState();
   const [hydrated, setHydrated] = useState<boolean>(false);
-  const [tokenChecked, setTokenChecked] = useState<boolean>(false);
+  // Auth gate:
+  // Prevent protected screens (tabs) from mounting before we validate SecureStore tokens.
+  // Otherwise, HomeScreen may call protected endpoints (e.g. /jobs) during the short window
+  // where persisted flags say "logged in" but tokens are missing → 401.
+  const [authReady, setAuthReady] = useState<boolean>(false);
 
   // Persist hydration gate:
   // - Redirect logic must wait until persisted auth state is loaded,
@@ -149,28 +153,39 @@ export default function RootLayout() {
   useEffect(() => {
     if (!rootNavigationState?.key) return;
     if (!hydrated) return;
-    if (!tokenChecked) {
-      setTokenChecked(true);
-      // If persisted routing flags survived an update but SecureStore tokens did not,
-      // the app may "think" it's logged in and immediately call protected endpoints (e.g. /jobs) → 401.
-      // Fail closed: if isLoggedIn but tokens are missing, force logout and go to onboarding.
-      (async () => {
+    let cancelled = false;
+    // If persisted routing flags survived an update but SecureStore tokens did not,
+    // the app may "think" it's logged in and immediately call protected endpoints (e.g. /jobs) → 401.
+    // Fail closed: validate tokens BEFORE mounting tabs.
+    (async () => {
+      try {
+        if (!isLoggedIn) return;
+        const ok = await hasValidTokens();
+        if (ok) return;
+        await clearTokens();
+        useAuthStore.getState().logout();
+        setTimeout(() => router.replace('/onboarding'), 0);
+      } catch {
+        // If token validation fails for any reason, treat session as invalid.
         try {
-          if (!isLoggedIn) return;
-          const ok = await hasValidTokens();
-          if (ok) return;
-          useAuthStore.getState().logout();
-          setTimeout(() => router.replace('/onboarding'), 0);
+          await clearTokens();
         } catch {
-          // If token validation fails for any reason, treat session as invalid.
-          useAuthStore.getState().logout();
-          setTimeout(() => router.replace('/onboarding'), 0);
+          // ignore
         }
-      })();
-    }
+        useAuthStore.getState().logout();
+        setTimeout(() => router.replace('/onboarding'), 0);
+      } finally {
+        if (!cancelled) setAuthReady(true);
+      }
+    })();
+    if (!isLoggedIn) setAuthReady(true);
+    return () => {
+      cancelled = true;
+    };
     const inAuthGroup = segments[0] === 'onboarding' || segments[0] === 'permission';
     const inSignupGroup = segments[0] === 'signup';
 
+    if (!authReady) return;
     if (!isLoggedIn && !inAuthGroup) {
       // Redirect to onboarding if not logged in and not already in onboarding
       setTimeout(() => router.replace('/onboarding'), 0);
@@ -187,7 +202,7 @@ export default function RootLayout() {
     }
   }, [
     hydrated,
-    tokenChecked,
+    authReady,
     isLoggedIn,
     isSignupComplete,
     segments,
@@ -207,23 +222,29 @@ export default function RootLayout() {
   return (
     <QueryProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack
-          screenOptions={{
-            headerBackTitle: '',
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="signup" options={{ headerShown: false }} />
-          <Stack.Screen name="profile" options={{ headerShown: false }} />
-          <Stack.Screen name="care-history" options={{ headerShown: false }} />
-          <Stack.Screen name="job" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="modal"
-            options={{ presentation: 'modal', title: 'Modal' }}
-          />
-          <Stack.Screen name="permission" options={{ headerShown: false }} />
-        </Stack>
+        {!authReady ? (
+          <View style={styles.splash}>
+            <Text style={styles.splashText}>로딩 중…</Text>
+          </View>
+        ) : (
+          <Stack
+            screenOptions={{
+              headerBackTitle: '',
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+            <Stack.Screen name="signup" options={{ headerShown: false }} />
+            <Stack.Screen name="profile" options={{ headerShown: false }} />
+            <Stack.Screen name="care-history" options={{ headerShown: false }} />
+            <Stack.Screen name="job" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="modal"
+              options={{ presentation: 'modal', title: 'Modal' }}
+            />
+            <Stack.Screen name="permission" options={{ headerShown: false }} />
+          </Stack>
+        )}
         <StatusBar style="auto" />
         <DevOverlay />
       </ThemeProvider>
@@ -232,6 +253,13 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  splashText: { color: '#6B7280', fontWeight: '700' },
   forceContainer: {
     flex: 1,
     justifyContent: 'center',
