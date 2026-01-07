@@ -1,6 +1,6 @@
 import Button from '@/components/ui/Button';
 import { useRouter } from 'expo-router';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Index() {
@@ -17,6 +17,13 @@ export default function Index() {
 
       {/* 본문 */}
       <View style={styles.content}>
+        {/* UX: tap anywhere to proceed (button still works) */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="다음"
+          onPress={() => router.push('/onboarding/step2')}
+          style={StyleSheet.absoluteFill}
+        />
         {/* 타이틀 */}
         <Text style={styles.title}>안심되는 돌봄 시작</Text>
 
