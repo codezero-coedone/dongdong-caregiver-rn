@@ -38,6 +38,8 @@ export default function CareerScreen() {
   const { setCareerInfo, careerInfo, completeSignup, signupInfo, caregiverInfo } =
     useAuthStore();
 
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
   // 경력 여부 (false: 신입, true: 경력)
   const [hasExperience, setHasExperience] = useState(
     careerInfo?.hasExperience ?? false,
@@ -104,6 +106,8 @@ export default function CareerScreen() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     // Store에 저장
     const selectedCerts = Object.keys(certificateImages);
     setCareerInfo({
@@ -174,6 +178,8 @@ export default function CareerScreen() {
         e?.message ||
         '회원가입(프로필 생성)에 실패했습니다.';
       Alert.alert('오류', String(msg));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -330,9 +336,9 @@ export default function CareerScreen() {
         </View>
       </ScrollView>
 
-      {/* 계속 버튼 */}
+      {/* 가입 완료(상태 기반 CTA) */}
       <View style={styles.buttonContainer}>
-        <Button title="계속" onPress={handleSubmit} />
+        <Button title="가입 완료" onPress={handleSubmit} isLoading={isSubmitting} />
       </View>
     </SafeAreaView>
   );

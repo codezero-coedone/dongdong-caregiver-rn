@@ -318,7 +318,7 @@ export default function CaregiverInfoScreen() {
 
       {/* Submit Button */}
       <View className="p-6">
-        <Button title="계속" onPress={handleSubmit(onSubmit)} />
+        <Button title="입력 완료" onPress={handleSubmit(onSubmit)} />
       </View>
     </SafeAreaView>
   );

@@ -224,11 +224,8 @@ export default function SignupInfoScreen() {
       if (result.success) {
         setIsVerified(true);
         setTimer(0);
-        // UX: 인증 성공 = 즉시 다음 화면 진입(추측/추가 탭 최소화)
-        const moved = await proceedToTermsIfValid();
-        if (!moved) {
-          Alert.alert('알림', '인증이 완료되었습니다.\n입력 정보를 확인해 주세요.');
-        }
+        // UX: 상태를 먼저 보여주고(인증 완료), 사용자의 '확인' 탭으로 다음 단계 진입.
+        // (한국 UX에서 "다음" 같은 범용 단어는 이탈 포인트가 되기 쉬움)
       } else {
         Alert.alert('오류', result.message);
       }
@@ -639,17 +636,34 @@ export default function SignupInfoScreen() {
             disabled={verificationCode.length !== 4}
           />
         ) : (
-          <Button
-            title="계속"
-            onPress={
-              isDomestic
-                ? domesticForm.handleSubmit(onDomesticSubmit)
-                : foreignerForm.handleSubmit(onForeignerSubmit)
-            }
-            // Allow press to surface validation errors instead of looking "stuck"
-            // when formState.isValid is false (e.g. untouched fields with mode='onBlur').
-            disabled={false}
-          />
+          <View style={{ gap: 10 }}>
+            <View
+              style={{
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                backgroundColor: '#F0F9FF',
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: 'rgba(2,132,199,0.18)',
+              }}
+            >
+              <Text style={{ fontWeight: '800', color: '#075985', marginBottom: 4 }}>
+                인증이 완료되었습니다
+              </Text>
+              <Text style={{ color: 'rgba(7,89,133,0.80)' }}>
+                확인을 누르면 다음 단계로 이동합니다.
+              </Text>
+            </View>
+            <Button
+              title="확인"
+              onPress={
+                isDomestic
+                  ? domesticForm.handleSubmit(onDomesticSubmit)
+                  : foreignerForm.handleSubmit(onForeignerSubmit)
+              }
+              disabled={false}
+            />
+          </View>
         )}
       </View>
 
