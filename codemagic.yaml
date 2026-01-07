@@ -432,6 +432,8 @@ workflows:
         APP_DIR: .
         NODE_ENV: "production"
         VC_BASE: 800000
+        # DEV observability rail (always on for internal APK builds)
+        EXPO_PUBLIC_DEVTOOLS: "1"
         # Use production package for dev APK to avoid extra Kakao package registration.
         # NOTE: If the Play-installed app exists on the device, you may need to uninstall it first
         # because Play re-signs installs with the Play App Signing key (signature mismatch).

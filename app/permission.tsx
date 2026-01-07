@@ -67,6 +67,16 @@ export default function PermissionScreen() {
     };
   }, [router, nextPath]);
 
+  const continueAnyway = async () => {
+    // Deterministic escape hatch: permission step must never block onboarding.
+    try {
+      await SecureStore.setItemAsync('onboarding_permission_complete', '1');
+    } catch {
+      // ignore
+    }
+    router.replace(nextPath);
+  };
+
   const requestPermissions = async () => {
     // Policy:
     // - Permissions are optional for DEV flow (we must never block progress).
@@ -124,21 +134,16 @@ export default function PermissionScreen() {
       });
     }
 
-    // Mark permission step as completed (1-time gate)
-    try {
-      await SecureStore.setItemAsync('onboarding_permission_complete', '1');
-    } catch {
-      // ignore
-    }
-
     if (hadError) {
       Alert.alert(
         '권한 안내',
         '일부 권한 요청에 실패했지만 앱은 계속 진행합니다.\n(설정에서 언제든 변경할 수 있어요)',
+        [{ text: '계속', onPress: () => void continueAnyway() }],
       );
+      return;
     }
 
-    router.replace(nextPath);
+    await continueAnyway();
   };
 
   return (
@@ -202,7 +207,14 @@ export default function PermissionScreen() {
           이용에 제한이 있을 수 있습니다.
         </Text>
         <TouchableOpacity style={styles.button} onPress={requestPermissions} activeOpacity={0.9}>
-          <Text style={styles.buttonText}>확인</Text>
+          <Text style={styles.buttonText}>권한 요청</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonGhost]}
+          onPress={() => void continueAnyway()}
+          activeOpacity={0.9}
+        >
+          <Text style={[styles.buttonText, styles.buttonTextGhost]}>계속</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -303,9 +315,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonGhost: {
+    marginTop: 12,
+    backgroundColor: '#F3F4F6',
+  },
   buttonText: {
     color: '#fff',
     fontSize: 17,
     fontWeight: 'bold',
+  },
+  buttonTextGhost: {
+    color: '#111827',
   },
 });
