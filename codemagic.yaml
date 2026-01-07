@@ -17,10 +17,11 @@ workflows:
         - dongdong-upload
       groups:
         - google_credentials
-        - dev
       vars:
         APP_DIR: .
         NODE_ENV: "production"
+        # SEALED: AAB stamp rail must never enable DEVTOOLS.
+        EXPO_PUBLIC_DEVTOOLS: "0"
         # Versioning (prevent Play upload failures due to non-increasing versionCode)
         # - Always publish with a high, monotonic versionCode derived from CM_BUILD_NUMBER.
         # - Safe even if you previously uploaded smaller versionCodes (e.g. 1~100).
