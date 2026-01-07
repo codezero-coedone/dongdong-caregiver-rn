@@ -41,6 +41,12 @@ workflows:
     # - Avoid wasting versionCode on every push.
     # - AAB rails are manual; dev APK rail is the only auto rail.
     scripts:
+      - name: Assert profile (SEALED)
+        script: |
+          if [ "${EXPO_PUBLIC_DEVTOOLS:-}" != "0" ]; then
+            echo "SEALED: caregiver AAB must run with EXPO_PUBLIC_DEVTOOLS=0"
+            exit 9
+          fi
       - name: Install dependencies (yarn)
         script: |
           cd "$APP_DIR"
@@ -322,6 +328,8 @@ workflows:
       vars:
         APP_DIR: .
         NODE_ENV: "production"
+        # Universal APK test rail is a DEV/QA rail (keep DBG enabled)
+        EXPO_PUBLIC_DEVTOOLS: "1"
         VC_BASE: 1767739662
         EXPO_PUBLIC_API_URL: "http://api.dongdong.io:3000/api/v1"
         EXPO_PUBLIC_KAKAO_APP_KEY: "6800df07055f12ec3dd904c9db31e1dd"
@@ -331,6 +339,12 @@ workflows:
     # - Avoid wasting versionCode on every push.
     # - This workflow is manual; dev APK rail is the only auto rail.
     scripts:
+      - name: Assert profile (SEALED)
+        script: |
+          if [ "${EXPO_PUBLIC_DEVTOOLS:-}" != "1" ]; then
+            echo "SEALED: caregiver AAB universal APK test must run with EXPO_PUBLIC_DEVTOOLS=1"
+            exit 9
+          fi
       - name: Install dependencies (yarn)
         script: |
           cd "$APP_DIR"
@@ -474,6 +488,12 @@ workflows:
           include: true
       cancel_previous_builds: true
     scripts:
+      - name: Assert profile (SEALED)
+        script: |
+          if [ "${EXPO_PUBLIC_DEVTOOLS:-}" != "1" ]; then
+            echo "SEALED: caregiver internal APK dev must run with EXPO_PUBLIC_DEVTOOLS=1"
+            exit 9
+          fi
       - name: Install dependencies (yarn)
         script: |
           cd "$APP_DIR"
