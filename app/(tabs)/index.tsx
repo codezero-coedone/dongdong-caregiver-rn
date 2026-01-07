@@ -20,7 +20,7 @@ import {
   View,
 } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 목업 데이터
 const MOCK_JOBS = [
@@ -246,6 +246,12 @@ export default function HomeScreen() {
   const [sortOption, setSortOption] = useState('latest');
   const [apiJobs, setApiJobs] = useState<ApiJobListing[]>([]);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const insets = useSafeAreaInsets();
+  // Micro-UX: keep content/floating controls above system navigation + tab bar
+  // even with android.edgeToEdgeEnabled=true.
+  const bottomPad = Math.max(insets.bottom, 12);
+  const tabBarHeight = 57 + bottomPad;
+  const contentBottom = tabBarHeight + 24;
 
   const careTypeLabel = (v: string | null | undefined): string => {
     switch (v) {
@@ -345,7 +351,7 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          contentContainerStyle={{ paddingBottom: 140 }}
+          contentContainerStyle={{ paddingBottom: contentBottom }}
         >
           {/* Title */}
           <Typography
@@ -436,7 +442,7 @@ export default function HomeScreen() {
       </KeyboardAvoidingView>
 
       {/* Floating Help Button */}
-      <TouchableOpacity style={styles.helpButton}>
+      <TouchableOpacity style={[styles.helpButton, { bottom: tabBarHeight + 12 }]}>
         <Ionicons name="call" size={24} color="#fff" />
       </TouchableOpacity>
 
@@ -719,7 +725,6 @@ const styles = StyleSheet.create({
   },
   helpButton: {
     position: 'absolute',
-    bottom: 20,
     right: 20,
     width: 50,
     height: 50,

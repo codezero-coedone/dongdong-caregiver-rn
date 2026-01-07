@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '@/services/apiClient';
 import CaregivingJournalHome from '../caregiving-journal';
 import { useAuthStore } from '@/store/authStore';
@@ -40,6 +40,10 @@ export default function MyScreen() {
   const [reviewPreview, setReviewPreview] = useState<any[]>([]);
   const logout = useAuthStore((s) => s.logout);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 12);
+  const tabBarHeight = 57 + bottomPad;
+  const contentBottom = tabBarHeight + 24;
 
   const handleLogout = () => {
     Alert.alert(
@@ -319,7 +323,13 @@ export default function MyScreen() {
 
       {/* MY홈 Tab Content */}
       {activeTab === 'MY홈' && (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ paddingBottom: contentBottom }}
+        >
           {/* Profile Card */}
           <View style={styles.profileCard}>
             <View style={styles.profileHeader}>
