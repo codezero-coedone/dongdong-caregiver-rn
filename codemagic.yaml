@@ -34,13 +34,9 @@ workflows:
         # - CM_KEY_PASSWORD   (if different from store password)
         # Secure file upload (keystore): upload as `upload.jks` (or change KEYSTORE_FILE below).
         KEYSTORE_FILE: upload.jks
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
-      cancel_previous_builds: true
+    # Trigger policy:
+    # - Avoid wasting versionCode on every push.
+    # - AAB rails are manual; dev APK rail is the only auto rail.
     scripts:
       - name: Install dependencies (yarn)
         script: |
@@ -314,13 +310,9 @@ workflows:
         EXPO_PUBLIC_KAKAO_APP_KEY: "6800df07055f12ec3dd904c9db31e1dd"
         KAKAO_APP_KEY: "6800df07055f12ec3dd904c9db31e1dd"
         KEYSTORE_FILE: upload.jks
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
-      cancel_previous_builds: true
+    # Trigger policy:
+    # - Avoid wasting versionCode on every push.
+    # - This workflow is manual; dev APK rail is the only auto rail.
     scripts:
       - name: Install dependencies (yarn)
         script: |
