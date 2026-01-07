@@ -25,7 +25,9 @@ workflows:
         # Versioning (prevent Play upload failures due to non-increasing versionCode)
         # - Always publish with a high, monotonic versionCode derived from CM_BUILD_NUMBER.
         # - Safe even if you previously uploaded smaller versionCodes (e.g. 1~100).
-        VC_BASE: 100000
+        # NOTE: Play already has a very high versionCode in history (e.g. 1767739662),
+        # so we must stay above it for the AAB rail to be deliverable.
+        VC_BASE: 1767739662
         # Public app config (keep builds deterministic even if Codemagic UI vars are missing)
         EXPO_PUBLIC_API_URL: "http://api.dongdong.io:3000/api/v1"
         EXPO_PUBLIC_KAKAO_APP_KEY: "6800df07055f12ec3dd904c9db31e1dd"
@@ -320,7 +322,7 @@ workflows:
       vars:
         APP_DIR: .
         NODE_ENV: "production"
-        VC_BASE: 100000
+        VC_BASE: 1767739662
         EXPO_PUBLIC_API_URL: "http://api.dongdong.io:3000/api/v1"
         EXPO_PUBLIC_KAKAO_APP_KEY: "6800df07055f12ec3dd904c9db31e1dd"
         KAKAO_APP_KEY: "6800df07055f12ec3dd904c9db31e1dd"
