@@ -10,7 +10,7 @@ import {
   verifyPhoneCode,
 } from '@/services/authService';
 import { apiClient } from '@/services/apiClient';
-import { devlog } from '@/services/devlog';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 import { useAuthStore } from '@/store/authStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
@@ -20,7 +20,7 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
-const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
 // 비자 종류 옵션
 const VISA_TYPES = [

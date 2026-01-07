@@ -2,6 +2,7 @@ import Button from '@/components/ui/Button';
 import ToggleButtonGroup from '@/components/ui/ToggleButtonGroup';
 import Typography from '@/components/ui/Typography';
 import { apiClient } from '@/services/apiClient';
+import { isDevtoolsEnabled } from '@/services/devlog';
 import { useAuthStore } from '@/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,7 +29,7 @@ const CERTIFICATES = [
   { id: 'other', label: '기타 자격증' },
 ];
 
-const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
 interface CertificateImage {
   uri: string;

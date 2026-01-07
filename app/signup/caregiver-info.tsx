@@ -13,7 +13,9 @@ import Input from '../../components/ui/Input';
 import MaskedRRNInput from '../../components/ui/MaskedRRNInput';
 import WarningBanner from '../../components/ui/WarningBanner';
 
-const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+import { isDevtoolsEnabled } from '@/services/devlog';
+
+const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
 // Zod Schema
 const caregiverInfoSchema = z

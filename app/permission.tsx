@@ -8,7 +8,7 @@ import React, { useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { devlog } from '@/services/devlog';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 
 // Define permission types
 type PermissionItemProps = {
@@ -37,7 +37,7 @@ export default function PermissionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ next?: string }>();
   const nextRaw = typeof params.next === 'string' ? params.next : '';
-  const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+  const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
   const nextPath = (() => {
     const p = String(nextRaw || '').trim();
