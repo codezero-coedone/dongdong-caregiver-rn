@@ -95,10 +95,10 @@ export const useAuthStore = create<AuthState>()(
                     // ignore
                 }
             },
+            // PII guard:
+            // - NEVER persist resident/foreigner numbers (rrn/foreignReg) to AsyncStorage.
+            // - Keep only auth routing flags in persist.
             partialize: (state) => ({
-                signupInfo: state.signupInfo,
-                caregiverInfo: state.caregiverInfo,
-                careerInfo: state.careerInfo,
                 isLoggedIn: state.isLoggedIn,
                 isSignupComplete: state.isSignupComplete,
                 loginType: state.loginType,

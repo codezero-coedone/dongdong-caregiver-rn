@@ -22,12 +22,10 @@ flowchart TD
     D -->|No| C
     
     C --> E[로그인 방식 선택]
-    E --> F[카카오 로그인]
-    E --> G[애플 로그인]
+    E --> F[카카오 로그인(고정)]
     E --> H[이메일 로그인<br/>심사용]
     
     F --> I{기존 회원?}
-    G --> I
     H --> I
     
     I -->|Yes| HOME
@@ -52,7 +50,7 @@ flowchart TD
 | 방식 | 설명 | 비고 |
 |------|------|------|
 | 카카오 로그인 | 카카오 SDK 사용 | 메인 로그인 방식 |
-| 애플 로그인 | Apple Sign In | iOS 필수 |
+| 애플 로그인 | Apple Sign In | **v0.1 범위 제외(추후)** |
 | 이메일 로그인 | ID/PW 입력 | **앱스토어 심사용** |
 
 **처리 로직:**
@@ -121,7 +119,7 @@ flowchart TD
 | 약관 동의 | `app/signup/terms.tsx` | ✅ 완료 |
 | 간병인 정보 입력 | `app/signup/caregiver-info.tsx` | ✅ 완료 |
 | 자격증 및 경력 등록 | `app/signup/career.tsx` | ✅ 완료 |
-| 주소 검색 | `app/signup/postcode-search.tsx` | ✅ 완료 |
+| 주소 검색 | (1차 범위 제외 / WebView 사용 금지로 미구현) | - |
 
 ---
 

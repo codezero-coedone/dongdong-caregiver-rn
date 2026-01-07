@@ -38,14 +38,6 @@ export default function SignupLayout() {
         }}
       />
       <Stack.Screen
-        name="postcode-search"
-        options={{
-          title: '주소 검색',
-          presentation: 'modal',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
         name="career"
         options={{
           title: '자격증 및 경력 등록',

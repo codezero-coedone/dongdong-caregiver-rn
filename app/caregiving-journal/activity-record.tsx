@@ -1,252 +1,243 @@
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import api from '@/services/apiClient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  DimensionValue,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useJournalStore, type ActivityRecord } from '../../store/journalStore';
 
-/* =========================
-   타입
-========================= */
-type StatusType = 'caution' | 'normal' | 'good';
+type Status = 'caution' | 'normal' | 'good';
+type ActivityRecord = { exercise?: Status; sleep?: Status; otherNotes?: string };
+type JournalListItem = { id: number; date: string };
+type JournalDetail = { id: number; activityRecord?: ActivityRecord };
 
-const STATUS_OPTIONS: { label: string; value: StatusType }[] = [
+function unwrapData<T>(resData: unknown): T {
+  const anyRes = resData as any;
+  if (anyRes && typeof anyRes === 'object' && 'data' in anyRes) {
+    return anyRes.data as T;
+  }
+  return anyRes as T;
+}
+
+const STATUS_OPTIONS: { label: string; value: Status }[] = [
   { label: '주의', value: 'caution' },
   { label: '보통', value: 'normal' },
   { label: '양호', value: 'good' },
 ];
 
-/* =========================
-   공통 세그먼트 컴포넌트
-========================= */
 const SegmentedControl = ({
   value,
   onChange,
 }: {
-  value: StatusType;
-  onChange: (v: StatusType) => void;
-}) => {
-  const selectedIndex = STATUS_OPTIONS.findIndex((opt) => opt.value === value);
-
-  const segmentWidth = `${100 / STATUS_OPTIONS.length}%` as DimensionValue;
-  const segmentLeft = `${
-    (100 / STATUS_OPTIONS.length) * selectedIndex
-  }%` as DimensionValue;
-
-  return (
-    <View style={styles.segmentWrapper}>
-      <View
-        pointerEvents="none"
-        style={[
-          styles.segmentActive,
-          {
-            width: segmentWidth,
-            left: segmentLeft,
-            borderTopLeftRadius: selectedIndex === 0 ? 12 : 0,
-            borderBottomLeftRadius: selectedIndex === 0 ? 12 : 0,
-            borderTopRightRadius:
-              selectedIndex === STATUS_OPTIONS.length - 1 ? 12 : 0,
-            borderBottomRightRadius:
-              selectedIndex === STATUS_OPTIONS.length - 1 ? 12 : 0,
-          },
-        ]}
-      />
-
-      {/* 버튼 */}
-      {STATUS_OPTIONS.map((opt, index) => (
-        <TouchableOpacity
+  value: Status;
+  onChange: (v: Status) => void;
+}) => (
+  <View style={styles.segmentWrapper}>
+    {STATUS_OPTIONS.map((opt, idx) => {
+      const selected = value === opt.value;
+      return (
+        <Pressable
           key={opt.value}
-          style={styles.segmentItem}
           onPress={() => onChange(opt.value)}
-          activeOpacity={0.8}
+          style={[
+            styles.segmentItem,
+            selected && styles.segmentItemSelected,
+            idx === 0 && styles.segmentItemFirst,
+            idx === STATUS_OPTIONS.length - 1 && styles.segmentItemLast,
+          ]}
         >
-          <Text
-            style={[
-              styles.segmentText,
-              value === opt.value && styles.segmentTextSelected,
-            ]}
-          >
+          <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
             {opt.label}
           </Text>
+        </Pressable>
+      );
+    })}
+  </View>
+);
 
-          {/* divider */}
-          {index !== STATUS_OPTIONS.length - 1 && (
-            <View style={styles.segmentDivider} />
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
-
-/* =========================
-   화면
-========================= */
 export default function ActivityRecordScreen() {
   const router = useRouter();
-  const { currentPatient, selectedDate, saveActivityRecord, entries } =
-    useJournalStore();
+  const params = useLocalSearchParams<{ matchId?: string; date?: string }>();
 
-  const existingEntry = entries.find(
-    (e) => e.date === selectedDate && e.patientId === currentPatient?.id,
-  );
-  const existingRecord = existingEntry?.activityRecord;
+  const matchId = useMemo(() => {
+    const raw = params.matchId;
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }, [params.matchId]);
+  const date = useMemo(() => String(params.date || ''), [params.date]);
 
-  const [exercise, setExercise] = useState<StatusType>(
-    existingRecord?.exercise ?? 'caution',
-  );
-  const [sleep, setSleep] = useState<StatusType>(
-    existingRecord?.sleep ?? 'caution',
-  );
-  const [otherNotes, setOtherNotes] = useState(
-    existingRecord?.otherNotes || '',
-  );
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [journalId, setJournalId] = useState<number | null>(null);
 
-  const handleSave = () => {
-    if (!currentPatient) {
-      Alert.alert('알림', '환자 정보가 없습니다.');
+  const [exercise, setExercise] = useState<Status>('caution');
+  const [sleep, setSleep] = useState<Status>('caution');
+  const [otherNotes, setOtherNotes] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!matchId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        if (!alive) return;
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const listRes = await api.get('/journals', { params: { matchId } });
+        const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
+        const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
+        if (!found) {
+          if (!alive) return;
+          setJournalId(null);
+          return;
+        }
+        setJournalId(found.id);
+        const detailRes = await api.get(`/journals/${found.id}`);
+        const detail = unwrapData<JournalDetail>((detailRes as any)?.data);
+        const rec = detail?.activityRecord;
+        if (!alive || !rec) return;
+        setExercise(rec.exercise ?? 'caution');
+        setSleep(rec.sleep ?? 'caution');
+        setOtherNotes(rec.otherNotes ?? '');
+      } catch {
+        // ignore
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [matchId, date]);
+
+  const onSave = async () => {
+    if (!matchId) {
+      Alert.alert('오류', 'matchId가 없습니다.');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      Alert.alert('오류', 'date가 없습니다.');
       return;
     }
 
-    const record: ActivityRecord = {
+    const payload: ActivityRecord = {
       exercise,
       sleep,
-      otherNotes: otherNotes || undefined,
+      otherNotes: otherNotes.trim() ? otherNotes.trim() : undefined,
     };
 
-    saveActivityRecord(selectedDate, currentPatient.id, record);
-    Alert.alert('저장 완료', '활동 기록이 저장되었습니다.', [
-      { text: '확인', onPress: () => router.back() },
-    ]);
+    setSubmitting(true);
+    try {
+      if (journalId) {
+        await api.put(`/journals/${journalId}`, { matchId, date, activityRecord: payload });
+      } else {
+        const res = await api.post('/journals', { matchId, date, activityRecord: payload });
+        const saved = unwrapData<any>((res as any)?.data);
+        const id = saved?.id;
+        if (typeof id === 'number') setJournalId(id);
+      }
+      Alert.alert('저장 완료', '활동 기록이 저장되었습니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.message || '저장에 실패했습니다.';
+      Alert.alert('오류', String(msg));
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.center}>
+          <Text style={{ color: '#6B7280' }}>불러오는 중…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>활동 기록</Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <Text style={styles.sectionTitle}>활동 기록</Text>
 
-        {/* 운동 */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>운동</Text>
-          <SegmentedControl value={exercise} onChange={setExercise} />
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>운동</Text>
+            <SegmentedControl value={exercise} onChange={setExercise} />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>수면</Text>
+            <SegmentedControl value={sleep} onChange={setSleep} />
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>기타 사항</Text>
+            <TextInput
+              value={otherNotes}
+              onChangeText={setOtherNotes}
+              style={[styles.input, styles.textArea]}
+              placeholder="전달사항 혹은 기타 특이 사항을 작성해주세요."
+              placeholderTextColor="#9CA3AF"
+              multiline
+              maxLength={500}
+            />
+            <Text style={styles.counter}>{otherNotes.length}/500</Text>
+          </View>
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+
+        <View style={styles.footer}>
+          <Pressable
+            onPress={onSave}
+            disabled={submitting}
+            style={[styles.saveButton, submitting && styles.saveButtonDisabled]}
+          >
+            <Text style={styles.saveButtonText}>{submitting ? '저장 중…' : '저장하기'}</Text>
+          </Pressable>
         </View>
-
-        {/* 수면 */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>수면</Text>
-          <SegmentedControl value={sleep} onChange={setSleep} />
-        </View>
-
-        {/* 기타 사항 */}
-        <View style={styles.field}>
-          <Text style={styles.fieldLabel}>기타 사항</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="전달사항 혹은 기타 특이 사항을 작성해주세요."
-            placeholderTextColor="#9CA3AF"
-            multiline
-            value={otherNotes}
-            onChangeText={setOtherNotes}
-          />
-          <Text style={styles.counter}>{otherNotes.length}/500</Text>
-        </View>
-
-        <View style={{ height: 120 }} />
-      </ScrollView>
-
-      {/* 저장 버튼 */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>저장하기</Text>
-        </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-/* =========================
-   스타일
-========================= */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFF',
-  },
-  content: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 20,
-  },
-  field: {
-    marginBottom: 28,
-  },
-  fieldLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 12,
-  },
+  container: { flex: 1, backgroundColor: '#FFF' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  content: { padding: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 20 },
 
-  /* ===== 세그먼트 ===== */
+  field: { marginBottom: 28 },
+  fieldLabel: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 12 },
+
   segmentWrapper: {
     flexDirection: 'row',
-    position: 'relative',
     height: 56,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
     overflow: 'hidden',
+    backgroundColor: '#fff',
   },
+  segmentItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  segmentItemFirst: {},
+  segmentItemLast: {},
+  segmentItemSelected: { backgroundColor: '#EFF6FF', borderColor: '#7AA2F7' },
+  segmentText: { fontSize: 18, fontWeight: '600', color: '#8B8B8B' },
+  segmentTextSelected: { color: '#2563EB' },
 
-  segmentActive: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 2,
-    borderColor: '#7AA2F7',
-  },
-
-  segmentItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-
-  segmentText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#8B8B8B',
-  },
-
-  segmentTextSelected: {
-    color: '#2563EB',
-  },
-
-  segmentDivider: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: '#E5E7EB',
-  },
-
-  /* ===== 입력 ===== */
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,
@@ -257,32 +248,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#111827',
   },
-  textArea: {
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  counter: {
-    marginTop: 6,
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
+  textArea: { minHeight: 120, textAlignVertical: 'top' },
+  counter: { marginTop: 8, fontSize: 12, color: '#9CA3AF', textAlign: 'right' },
 
-  /* ===== 하단 ===== */
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    backgroundColor: '#fff',
-  },
-  saveButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#fff',
-  },
+  footer: { padding: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', backgroundColor: '#fff' },
+  saveButton: { backgroundColor: '#2563EB', paddingVertical: 18, borderRadius: 14, alignItems: 'center' },
+  saveButtonDisabled: { backgroundColor: '#93C5FD' },
+  saveButtonText: { fontSize: 17, fontWeight: '700', color: '#FFFFFF' },
 });
+
+

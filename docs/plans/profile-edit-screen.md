@@ -57,7 +57,7 @@ app/
 ├── profile/
 │   ├── _layout.tsx       # Stack Navigator
 │   ├── edit.tsx          # 프로필 수정 스크린
-│   └── postcode-search.tsx  # 주소 검색 (재사용 또는 모달)
+│   └── (주소 검색은 1차 범위 제외 / WebView 사용 금지)
 └── (tabs)/
     └── my.tsx            # 프로필 수정 버튼 연결
 ```

@@ -35,6 +35,12 @@ module.exports = () => {
     return false;
   });
 
+  const hasKakaoTalkQueriesPlugin = plugins.some((p) => {
+    if (typeof p === 'string') return p === './plugins/withKakaoTalkQueries';
+    if (Array.isArray(p)) return p[0] === './plugins/withKakaoTalkQueries';
+    return false;
+  });
+
   if (!hasUpdatesPlugin) {
     plugins.push('expo-updates');
   }
@@ -42,6 +48,11 @@ module.exports = () => {
   // Allow HTTP API calls on Android 9+ (required for current DEV server: http://api.dongdong.io:3000)
   if (!hasCleartextPlugin) {
     plugins.push('./plugins/withCleartextTraffic');
+  }
+
+  // Android 11+ package visibility: allow detecting KakaoTalk install status.
+  if (!hasKakaoTalkQueriesPlugin) {
+    plugins.push('./plugins/withKakaoTalkQueries');
   }
 
   if (!hasKakaoPlugin) {

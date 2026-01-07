@@ -401,7 +401,7 @@ export default function MyScreen() {
                     onPress={() =>
                       ongoingUi.matchId
                         ? router.push(
-                            `/caregiving-journal/new?matchId=${String(ongoingUi.matchId)}`,
+                            `/caregiving-journal?matchId=${String(ongoingUi.matchId)}`,
                           )
                         : setActiveTab('간병일지')
                     }

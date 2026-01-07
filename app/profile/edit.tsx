@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   ScrollView,
@@ -12,23 +12,27 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import AddressInput from '../../components/ui/AddressInput';
 import Button from '../../components/ui/Button';
-import DaumPostcode, { PostcodeData } from '../../components/ui/DaumPostcode';
 import FileUploadBox from '../../components/ui/FileUploadBox';
 import Input from '../../components/ui/Input';
+import { apiClient } from '@/services/apiClient';
 
-// Mock 사용자 데이터 (실제로는 Store에서 가져옴)
-const MOCK_USER_DATA = {
-  name: '김간병',
-  isVerified: true,
-  birthDate: '1980.12.25',
-  gender: '남성',
-  phone: '01012341234',
-  address: '서울특별시 강남구 삼성동 꿈빛로 16',
-  addressDetail: '레미안 아파트, 123-1234',
-  hasExperience: true,
-  certificates: ['caregiver', 'nursing_assistant'],
+type Profile = {
+  id: number;
+  name: string;
+  phone: string;
+  address: string;
+  addressDetail?: string;
+  birthDate: string;
+  gender: string;
+  experienceYears: number;
+  introduction?: string;
+  licenseType?: string;
+  licenseNumber?: string;
+  rating: number;
+  reviewCount: number;
+  isVerified: boolean;
+  isAvailable: boolean;
 };
 
 // 자격증 목록
@@ -43,26 +47,23 @@ const CERTIFICATES = [
 export default function ProfileEditScreen() {
   const router = useRouter();
 
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
   // Form state
-  const [phone, setPhone] = useState(MOCK_USER_DATA.phone);
-  const [address, setAddress] = useState(MOCK_USER_DATA.address);
-  const [addressDetail, setAddressDetail] = useState(
-    MOCK_USER_DATA.addressDetail,
-  );
-  const [hasExperience, setHasExperience] = useState(
-    MOCK_USER_DATA.hasExperience,
-  );
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [addressDetail, setAddressDetail] = useState('');
+  const [hasExperience, setHasExperience] = useState(false);
   const [selectedCertificates, setSelectedCertificates] = useState<string[]>(
-    MOCK_USER_DATA.certificates,
+    [],
   );
   const [criminalRecordFile, setCriminalRecordFile] = useState<{
     uri: string;
     name: string;
     mimeType?: string;
   } | null>(null);
-
-  // Postcode modal state
-  const [isPostcodeVisible, setIsPostcodeVisible] = useState(false);
 
   const [certificateFiles, setCertificateFiles] = useState<
     Record<string, { uri: string; name: string } | null>
@@ -87,14 +88,44 @@ export default function ProfileEditScreen() {
     setPhone(numbers);
   };
 
-  const handleAddressSearch = () => {
-    setIsPostcodeVisible(true);
-  };
+  function unwrapData<T>(resData: unknown): T {
+    const anyRes = resData as any;
+    if (anyRes && typeof anyRes === 'object' && 'data' in anyRes) {
+      return anyRes.data as T;
+    }
+    return anyRes as T;
+  }
 
-  const handlePostcodeSelect = (data: PostcodeData) => {
-    setAddress(data.roadAddress || data.address);
-    setAddressDetail('');
-  };
+  useEffect(() => {
+    let alive = true;
+    setLoadingProfile(true);
+    setProfileError(null);
+    (async () => {
+      try {
+        const res = await apiClient.get('/caregivers/profile');
+        const data = unwrapData<Profile>((res as any)?.data);
+        if (!alive) return;
+        setProfile(data ?? null);
+        setPhone(String(data?.phone ?? ''));
+        setAddress(String(data?.address ?? ''));
+        setAddressDetail(String(data?.addressDetail ?? ''));
+        setHasExperience(Number(data?.experienceYears ?? 0) > 0);
+      } catch (e: any) {
+        if (!alive) return;
+        setProfile(null);
+        setProfileError(
+          e?.response?.data?.message ||
+            e?.message ||
+            '프로필을 불러오지 못했습니다.',
+        );
+      } finally {
+        if (alive) setLoadingProfile(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleFileUpload = async () => {
     try {
@@ -157,20 +188,32 @@ export default function ProfileEditScreen() {
   };
 
   const handleSubmit = () => {
-    // TODO: Save profile changes to store/backend
-    console.log('Profile updated:', {
-      phone,
-      address,
-      addressDetail,
-      hasExperience,
-      certificates: selectedCertificates,
-      criminalRecordFile,
-    });
-
-    Alert.alert('완료', '프로필이 수정되었습니다.', [
-      { text: '확인', onPress: () => router.back() },
-    ]);
+    void (async () => {
+      try {
+        await apiClient.put('/caregivers/profile', {
+          phone,
+          address,
+          addressDetail,
+        });
+        Alert.alert('완료', '프로필이 수정되었습니다.', [
+          { text: '확인', onPress: () => router.back() },
+        ]);
+      } catch (e: any) {
+        const msg =
+          e?.response?.data?.message ||
+          e?.message ||
+          '프로필 수정에 실패했습니다.';
+        Alert.alert('오류', String(msg));
+      }
+    })();
   };
+
+  const genderLabel = (() => {
+    const g = String(profile?.gender ?? '').toUpperCase();
+    if (g === 'MALE') return '남성';
+    if (g === 'FEMALE') return '여성';
+    return String(profile?.gender ?? '');
+  })();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -200,8 +243,10 @@ export default function ProfileEditScreen() {
               <Ionicons name="person" size={28} color="#9CA3AF" />
             </View>
             <View style={styles.nameContainer}>
-              <Text style={styles.userName}>{MOCK_USER_DATA.name}</Text>
-              {MOCK_USER_DATA.isVerified && (
+              <Text style={styles.userName}>
+                {loadingProfile ? '로딩 중…' : profile?.name ?? '간병인'}
+              </Text>
+              {!!profile?.isVerified && (
                 <Ionicons name="checkmark-circle" size={18} color="#3B82F6" />
               )}
             </View>
@@ -212,9 +257,9 @@ export default function ProfileEditScreen() {
             <Text style={styles.fieldLabel}>생년월일</Text>
             <View style={styles.readOnlyField}>
               <Text style={styles.readOnlyText}>
-                {MOCK_USER_DATA.birthDate}
+                {profile?.birthDate ?? '-'}
               </Text>
-              <Text style={styles.genderText}>{MOCK_USER_DATA.gender}</Text>
+              <Text style={styles.genderText}>{genderLabel || '-'}</Text>
             </View>
           </View>
 
@@ -242,11 +287,23 @@ export default function ProfileEditScreen() {
           {/* 주소 */}
           <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>주소</Text>
-            <AddressInput
-              address={address}
-              addressDetail={addressDetail}
-              onAddressDetailChange={setAddressDetail}
-              onSearchPress={handleAddressSearch}
+            {profileError && (
+              <Text style={[styles.helperText, { color: '#EF4444' }]}>
+                {String(profileError)}
+              </Text>
+            )}
+            <Input
+              containerClassName="mb-0"
+              placeholder="주소"
+              value={address}
+              onChangeText={setAddress}
+            />
+            <View style={{ height: 8 }} />
+            <Input
+              containerClassName="mb-0"
+              placeholder="상세 주소"
+              value={addressDetail}
+              onChangeText={setAddressDetail}
             />
           </View>
 
@@ -428,11 +485,7 @@ export default function ProfileEditScreen() {
       </View>
 
       {/* 주소 검색 모달 */}
-      <DaumPostcode
-        visible={isPostcodeVisible}
-        onClose={() => setIsPostcodeVisible(false)}
-        onSelected={handlePostcodeSelect}
-      />
+      {/* SSOT: caregiver 앱은 WebView 사용 금지. (주소 검색은 1차 범위에서 제외) */}
     </SafeAreaView>
   );
 }

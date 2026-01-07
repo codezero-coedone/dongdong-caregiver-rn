@@ -7,7 +7,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
-import AddressInput from '../../components/ui/AddressInput';
 import Button from '../../components/ui/Button';
 import FileUploadBox from '../../components/ui/FileUploadBox';
 import Input from '../../components/ui/Input';
@@ -57,7 +56,6 @@ export default function CaregiverInfoScreen() {
   });
 
   const phone = watch('phone');
-  const address = watch('address');
 
   // Phone number formatting helper
   const formatPhoneNumber = (value: string) => {
@@ -77,20 +75,8 @@ export default function CaregiverInfoScreen() {
       onChange(numbers);
     };
 
-  const handleAddressSearch = () => {
-    // Navigate to postcode search screen instead of modal
-    router.push('/signup/postcode-search');
-  };
-
-  // Sync address from store when returning from postcode search
-  React.useEffect(() => {
-    if (caregiverInfo?.address && caregiverInfo.address !== watch('address')) {
-      setValue('address', caregiverInfo.address, {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-    }
-  }, [caregiverInfo?.address]);
+  // SSOT: caregiver 앱은 WebView 사용 금지.
+  // 주소 검색(다음/웹) 대신 수동 입력으로 진행합니다.
 
   const handleFileUpload = async () => {
     try {
@@ -265,21 +251,35 @@ export default function CaregiverInfoScreen() {
           </Text>
           <Controller
             control={control}
-            name="addressDetail"
-            render={({ field: { onChange, value } }) => (
-              <AddressInput
-                address={address}
-                addressDetail={value || ''}
-                onAddressDetailChange={onChange}
-                onSearchPress={handleAddressSearch}
+            name="address"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                containerClassName="mb-0"
+                placeholder="예) 서울특별시 강남구 테헤란로 123"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.address?.message}
+                isValid={Boolean(value) && !errors.address}
               />
             )}
           />
-          {errors.address && (
-            <Text className="mt-1 text-sm text-red-500">
-              {errors.address.message}
-            </Text>
-          )}
+
+          <View style={{ height: 8 }} />
+
+          <Controller
+            control={control}
+            name="addressDetail"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                containerClassName="mb-0"
+                placeholder="상세 주소 (선택)"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+              />
+            )}
+          />
         </View>
 
         {/* Criminal Record File Upload */}

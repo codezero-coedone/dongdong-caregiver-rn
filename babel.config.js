@@ -1,9 +1,10 @@
 module.exports = function (api) {
     api.cache(true);
     return {
-        // NativeWind v4:
-        // - Keep `jsxImportSource: 'nativewind'` on the Expo preset.
-        // - `nativewind/babel` must be used as a *preset* (it expands to underlying plugins).
+        // NativeWind v4.x currently ships `nativewind/babel` as a *preset*
+        // (it re-exports `react-native-css-interop/babel`, which returns `{ plugins: [...] }`).
+        // If registered as a plugin, Metro bundling can fail with:
+        //   ".plugins is not a valid Plugin property"
         presets: [
             ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
             'nativewind/babel',
