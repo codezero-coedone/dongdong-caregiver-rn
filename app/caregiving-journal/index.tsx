@@ -331,6 +331,89 @@ export default function CaregivingJournalHome() {
     }
   }, []);
 
+  const seedLockedJournal409 = useCallback(async () => {
+    if (!DEVTOOLS_ENABLED) return;
+    // ============================================
+    // SEALED DEV LEVER (v0.1) — DO NOT SHIP TO STORE
+    // ============================================
+    // Purpose: T8-4-2 증거 확보용 (endDate 이후 409 수정/작성 락).
+    // Flow: POST /patients -> POST /care-requests(endDate in past) -> POST /jobs/:id/apply -> POST /journals (expect 409)
+    try {
+      devlog({ scope: 'SYS', level: 'info', message: 'seed lock(409): start' });
+
+      const now = Date.now();
+      const start = new Date(now - 3 * 60 * 60 * 1000);
+      const end = new Date(now - 60 * 1000);
+      const today = toYmd(new Date());
+
+      const patientRes = await api.post('/patients', {
+        name: `DEV 종료환자`,
+        birthDate: '1950-01-15',
+        gender: 'MALE',
+        mobilityLevel: 'PARTIAL_ASSIST',
+        diagnosis: 'DEV-LOCK',
+        notes: 'DEV lock seed',
+      });
+      const patient = unwrapData<any>((patientRes as any)?.data);
+      const patientId = typeof patient?.id === 'string' ? patient.id : String(patient?.id || '');
+      if (!patientId) {
+        devlog({ scope: 'SYS', level: 'error', message: 'seed lock(409): patient id missing' });
+        return;
+      }
+
+      const reqRes = await api.post('/care-requests', {
+        patientId,
+        careType: 'HOSPITAL',
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        location: 'DEV 종료 병원',
+        requirements: 'DEV lock seed',
+        dailyRate: 150000,
+      });
+      const req = unwrapData<any>((reqRes as any)?.data);
+      const jobId = typeof req?.id === 'string' ? req.id : String(req?.id || '');
+      if (!jobId) {
+        devlog({ scope: 'SYS', level: 'error', message: 'seed lock(409): job id missing' });
+        return;
+      }
+      devlog({ scope: 'SYS', level: 'info', message: `seed lock(409): jobId=${jobId}` });
+
+      await api.post(`/jobs/${encodeURIComponent(jobId)}/apply`, { message: 'DEV lock test' });
+      devlog({ scope: 'SYS', level: 'info', message: 'seed lock(409): apply ok' });
+
+      // Reload matches so user can see the locked match too.
+      setLoadingMatches(true);
+      const mres = await api.get('/my/matches');
+      const data = unwrapData<MyMatch[]>((mres as any)?.data);
+      const matchesList = Array.isArray(data) ? data : [];
+      setMatches(matchesList);
+      if (matchesList.length > 0) setSelectedMatchId(matchesList[0].id);
+      setSelectedDate(today);
+
+      // Attempt to create a journal; backend must return 409 due to endDate lock.
+      try {
+        await api.post('/journals', { matchId: matchesList[0]?.id, date: today, notes: 'DEV lock test' });
+        devlog({ scope: 'SYS', level: 'warn', message: 'seed lock(409): unexpected success' });
+      } catch (e: any) {
+        devlog({
+          scope: 'SYS',
+          level: 'info',
+          message: 'seed lock(409): expected',
+          meta: { status: e?.response?.status, message: e?.response?.data?.message || e?.message },
+        });
+      }
+    } catch (e: any) {
+      devlog({
+        scope: 'SYS',
+        level: 'error',
+        message: 'seed lock(409): failed',
+        meta: { status: e?.response?.status, message: e?.response?.data?.message || e?.message },
+      });
+    } finally {
+      setLoadingMatches(false);
+    }
+  }, [selectedDate]);
+
   useEffect(() => {
     if (appliedRouteParams) return;
     if (loadingMatches) return;
@@ -647,13 +730,22 @@ export default function CaregivingJournalHome() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>환자 선택</Text>
           {matches.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.matchRow}>
-                {matches.map((m) => (
-                  <MatchChip key={m.id} m={m} />
-                ))}
-              </View>
-            </ScrollView>
+            <>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.matchRow}>
+                  {matches.map((m) => (
+                    <MatchChip key={m.id} m={m} />
+                  ))}
+                </View>
+              </ScrollView>
+              {DEVTOOLS_ENABLED && (
+                <View style={{ marginTop: 10, gap: 10 }}>
+                  <Pressable onPress={seedLockedJournal409} style={styles.ctaBtn}>
+                    <Text style={styles.ctaBtnText}>DEV: 종료(409) 테스트 자동 생성</Text>
+                  </Pressable>
+                </View>
+              )}
+            </>
           ) : (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyText}>
