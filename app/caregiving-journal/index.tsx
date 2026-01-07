@@ -266,10 +266,8 @@ export default function CaregivingJournalHome() {
       void loadJournalForDate();
     }, [loadJournalForDate]),
   );
-
-  useEffect(() => {
-    void loadJournalForDate();
-  }, [loadJournalForDate]);
+  // NOTE: `useFocusEffect` already runs on initial focus and when dependencies change (while focused).
+  // Keeping a second `useEffect` here causes duplicate API calls on first mount.
 
   const shiftDate = (deltaDays: number) => {
     const d = new Date(`${selectedDate}T00:00:00`);
