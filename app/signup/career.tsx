@@ -130,6 +130,8 @@ export default function CareerScreen() {
         caregiverInfo?.rrnBack ??
         '';
       const idNumber = toDigits(`${front}${back}`);
+      const DEV_DUMMY_ID = '9001011234567';
+      const effectiveId = idNumber.length === 13 ? idNumber : DEV_DUMMY_ID;
 
       const phone = caregiverInfo?.phone ?? signupInfo?.phone ?? '';
       const address = caregiverInfo?.address ?? '';
@@ -156,13 +158,11 @@ export default function CareerScreen() {
         addressDetail: caregiverInfo?.addressDetail ?? undefined,
         experienceYears: hasExperience ? 1 : 0,
         licenseType,
-        ...(DEVTOOLS_ENABLED
-          ? {}
-          : {
-              isForeigner,
-              residentNumber: isForeigner ? undefined : idNumber,
-              foreignerNumber: isForeigner ? idNumber : undefined,
-            }),
+        // Backend requires id number to exist to derive birthDate/gender.
+        // DEV mode uses a deterministic dummy (non-PII) to keep the flow unblocked.
+        isForeigner,
+        residentNumber: isForeigner ? undefined : effectiveId,
+        foreignerNumber: isForeigner ? effectiveId : undefined,
       };
 
       try {

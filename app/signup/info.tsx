@@ -316,6 +316,11 @@ export default function SignupInfoScreen() {
       return;
     }
     try {
+      // Backend currently requires either:
+      // - (birthDate+gender) derived from id number OR explicitly provided
+      // - and residentNumber/foreignerNumber (13 digits)
+      // For DEV fast-lane, we use a deterministic dummy ID (non-PII) to unblock flow.
+      const DEV_DUMMY_ID = '9001011234567';
       const digits = String(phone || '').replace(/[^\d]/g, '');
       if (digits.length < 10) {
         Alert.alert('알림', '올바른 휴대폰 번호를 입력해주세요.');
@@ -330,6 +335,8 @@ export default function SignupInfoScreen() {
         // v0.1 DEV 레일: 주소는 필수이므로 기본값으로 채우고, 이후 프로필 편집에서 수정 가능.
         address: '서울특별시',
         experienceYears: 0,
+        isForeigner: false,
+        residentNumber: DEV_DUMMY_ID,
       };
 
       devlog({
