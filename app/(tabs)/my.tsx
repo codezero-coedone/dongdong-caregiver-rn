@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '@/services/apiClient';
 import CaregivingJournalHome from '../caregiving-journal';
+import { useAuthStore } from '@/store/authStore';
+import { clearTokens } from '@/services/tokenService';
 
 // 결정성/실데이터 정책:
 // - MY 화면에서 mock 소개/수익 숫자를 노출하지 않는다.
@@ -36,6 +38,36 @@ export default function MyScreen() {
   const [myMatches, setMyMatches] = useState<any[]>([]);
   const [ongoingMatch, setOngoingMatch] = useState<any | null>(null);
   const [reviewPreview, setReviewPreview] = useState<any[]>([]);
+  const logout = useAuthStore((s) => s.logout);
+
+  const handleLogout = () => {
+    Alert.alert(
+      '로그아웃',
+      '세션(토큰/로그인 상태)만 초기화합니다.\n로컬 데이터/설정은 유지됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '로그아웃',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Token reset (session only)
+              await clearTokens();
+            } catch {
+              // ignore
+            }
+            try {
+              logout();
+            } catch {
+              // ignore
+            }
+            // Deterministic: return to onboarding entry.
+            router.replace('/onboarding');
+          },
+        },
+      ],
+    );
+  };
 
   function unwrapData<T>(resData: unknown): T {
     const anyRes = resData as any;
@@ -523,6 +555,12 @@ export default function MyScreen() {
               </View>
             )}
           </View>
+
+          {/* 로그아웃 (세션만 초기화) */}
+          <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
+            <Text style={styles.logoutText}>로그아웃</Text>
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          </TouchableOpacity>
 
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -1174,6 +1212,24 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 16,
     color: '#171719',
+  },
+  logoutRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.18)',
+    backgroundColor: 'rgba(239,68,68,0.06)',
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#EF4444',
   },
   dividerWrapper: {
     marginTop: 20,
