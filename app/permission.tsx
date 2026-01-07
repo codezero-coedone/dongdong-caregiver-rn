@@ -134,15 +134,7 @@ export default function PermissionScreen() {
       });
     }
 
-    if (hadError) {
-      Alert.alert(
-        '권한 안내',
-        '일부 권한 요청에 실패했지만 앱은 계속 진행합니다.\n(설정에서 언제든 변경할 수 있어요)',
-        [{ text: '계속', onPress: () => void continueAnyway() }],
-      );
-      return;
-    }
-
+    // Never block onboarding with a modal alert. If something fails, we just proceed.
     await continueAnyway();
   };
 

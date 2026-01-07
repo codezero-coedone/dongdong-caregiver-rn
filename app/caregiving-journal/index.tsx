@@ -166,16 +166,38 @@ export default function CaregivingJournalHome() {
     try {
       devlog({ scope: 'SYS', level: 'info', message: 'seed match: start' });
       const res = await api.get('/jobs');
-      const jobs = unwrapData<any[]>((res as any)?.data);
-      const first = Array.isArray(jobs) ? jobs[0] : null;
-      const jobId = first && typeof first === 'object' ? Number((first as any).id) : NaN;
-      if (!Number.isFinite(jobId)) {
-        devlog({ scope: 'SYS', level: 'warn', message: 'seed match: no job id' });
+      const raw = (res as any)?.data;
+      const jobs = unwrapData<any>(raw);
+      const list: any[] = Array.isArray(jobs)
+        ? jobs
+        : Array.isArray((jobs as any)?.items)
+          ? (jobs as any).items
+          : Array.isArray((jobs as any)?.results)
+            ? (jobs as any).results
+            : Array.isArray((jobs as any)?.data)
+              ? (jobs as any).data
+              : [];
+
+      const first = list[0] && typeof list[0] === 'object' ? (list[0] as any) : null;
+      const idRaw = first ? (first.id ?? first.jobId ?? first.requestId) : null;
+      const jobId = typeof idRaw === 'string' ? idRaw.trim() : idRaw != null ? String(idRaw) : '';
+      if (!jobId) {
+        devlog({
+          scope: 'SYS',
+          level: 'warn',
+          message: 'seed match: no job id',
+          meta: {
+            shape: typeof jobs,
+            listCount: list.length,
+            firstKeys: first ? Object.keys(first).slice(0, 20) : [],
+          },
+        });
         return;
       }
+
       devlog({ scope: 'SYS', level: 'info', message: `seed match: apply jobId=${jobId}` });
       // Backend accepts optional body; send stable shape to avoid 400 on strict validators.
-      await api.post(`/jobs/${jobId}/apply`, { message: null });
+      await api.post(`/jobs/${encodeURIComponent(jobId)}/apply`, { message: null });
       devlog({ scope: 'SYS', level: 'info', message: 'seed match: apply ok' });
       // Reload matches
       setLoadingMatches(true);
