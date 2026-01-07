@@ -39,6 +39,8 @@
   - 버튼 탭 → 로그인 UI가 떠야 함(무반응 금지)
   - 로그인 완료 후 `/auth/social` 성공 → 토큰 저장
 - 홈은 WebView로 `dev-client` 컨텐츠가 로드되어야 함
+  - 토큰은 **앱(RN)이 단일 소유**하고, WebView에는 **주입(inject)**만 한다.
+  - WebView는 “앱의 소유물(컨테이너)”이며, 인증/토큰 소유권을 WebView로 넘기지 않는다.
 
 ### 1.5 RN Caregiver (`dongdong-caregiver-rn`)
 

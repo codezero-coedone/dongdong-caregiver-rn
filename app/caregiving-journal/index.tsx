@@ -157,6 +157,12 @@ export default function CaregivingJournalHome() {
 
   const seedMatchFromFirstJob = useCallback(async () => {
     if (!DEVTOOLS_ENABLED) return;
+    // ============================================
+    // SEALED DEV LEVER (v0.1) — DO NOT SHIP TO STORE
+    // ============================================
+    // Purpose: 간병일지 테스트의 선행조건(matchId)을 "추측 없이" 즉시 확보하기 위한 DEV 전용 레버.
+    // - jobs[0] 자동 지원 → my/matches 재조회 → 첫 matchId 선택
+    // - DEV TRACE로 성공/실패를 즉시 관측
     try {
       devlog({ scope: 'SYS', level: 'info', message: 'seed match: start' });
       const res = await api.get('/jobs');
