@@ -11,6 +11,9 @@
 
 ## SEALED (최신, 우선 참조)
 
+0. **대표/PM 1페이지 요약(SEALED)**  
+   - `docs/SEALED/EXEC_SUMMARY-v0.1.md`
+
 1. **DoD (4레포 통합)**  
    - `docs/SEALED/DoD-4REPOS-RELEASE-v0.1.md`
 

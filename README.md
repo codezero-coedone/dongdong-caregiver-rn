@@ -5,6 +5,8 @@
 ## Docs (현재 기준)
 
 - `docs/README.md`
+- (대표/PM 1페이지): `docs/SEALED/EXEC_SUMMARY-v0.1.md`
+- (문서 허브/SSOT): `docs/SEALED_INDEX.md`
 
 ## Run (DEV)
 
