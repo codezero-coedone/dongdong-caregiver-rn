@@ -27,6 +27,15 @@
    - `docs/SEALED/PRIMEECHO_CI_PIPELINE_SEALED_v1.md`
    - `docs/SEALED/PRIMEECHO_DONGDONG_RUNBOOK_SEALED_v2.md`
 
+5. **GUARDRAILS (핵심 금지/보호 규칙)**  
+   - `docs/SEALED/GUARDRAILS-v0.1.md`
+
+6. **Tooling 실행 규격(Win/Codemagic/Remote 단일 규격)**  
+   - `docs/SEALED/TOOLING_EXEC_SPEC-v0.1.md`
+
+7. **OPS 레이아웃(서버 역할/디렉토리 분리 봉인)**  
+   - `docs/SEALED/OPS_LAYOUT-v0.1.md`
+
 ---
 
 ## ARCHIVE (참고만, 실행 기준 아님)
