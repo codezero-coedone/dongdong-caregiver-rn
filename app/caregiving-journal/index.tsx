@@ -1,5 +1,5 @@
 import api from '@/services/apiClient';
-import { devlog } from '@/services/devlog';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -60,7 +60,7 @@ type JournalDetail = {
   updatedAt: string;
 };
 
-const DEVTOOLS_ENABLED = Boolean(__DEV__ || process.env.EXPO_PUBLIC_DEVTOOLS === '1');
+const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
 function unwrapData<T>(resData: unknown): T {
   const anyRes = resData as any;
@@ -174,7 +174,8 @@ export default function CaregivingJournalHome() {
         return;
       }
       devlog({ scope: 'SYS', level: 'info', message: `seed match: apply jobId=${jobId}` });
-      await api.post(`/jobs/${jobId}/apply`);
+      // Backend accepts optional body; send stable shape to avoid 400 on strict validators.
+      await api.post(`/jobs/${jobId}/apply`, { message: null });
       devlog({ scope: 'SYS', level: 'info', message: 'seed match: apply ok' });
       // Reload matches
       setLoadingMatches(true);
