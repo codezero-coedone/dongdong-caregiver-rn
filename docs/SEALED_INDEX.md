@@ -39,6 +39,9 @@
 7. **OPS 레이아웃(서버 역할/디렉토리 분리 봉인)**  
    - `docs/SEALED/OPS_LAYOUT-v0.1.md`
 
+8. **POLISH_RAIL (UX 폴리싱 레일, 봉인)**  
+   - `docs/SEALED/POLISH_RAIL-v0.1.md`
+
 ---
 
 ## ARCHIVE (참고만, 실행 기준 아님)
