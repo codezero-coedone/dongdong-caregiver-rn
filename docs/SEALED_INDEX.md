@@ -45,6 +45,9 @@
 9. **SSOT-UI Contract (피그마 스냅샷 → 구현 규격, 봉인)**  
    - `docs/SEALED/SSOT_UI_CONTRACT-v0.1.md`
 
+10. **SSOT 부록 — 병렬구동/연동(시간선 Freeze + 사건 트리거 매트릭스)**  
+   - `docs/SEALED/SSOT_PARALLEL_SYNC_APPENDIX-v0.1.md`
+
 ---
 
 ## ARCHIVE (참고만, 실행 기준 아님)
