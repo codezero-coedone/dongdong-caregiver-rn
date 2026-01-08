@@ -36,6 +36,7 @@
   - Guardian: (해당 엔드포인트 기준으로 동일 원칙 적용)
 - **G3. 매칭 전제조건 확보**
   - `matchId`가 확보돼야 간병일지 테스트가 가능
+  - WebView(Guardian)가 먹통이면: **Guardian(DEVTOOLS=1)에서 “간병요청(공고) 1개 생성” → Caregiver에서 지원(apply) → `/my/matches`로 matchId 확보** (SSOT=서버)
 - **G4. 간병일지 CRUD**
   - `POST /journals`, `GET /journals`, `GET /journals/:id`, `PUT /journals/:id`
 - **G5. UX/정책/릴리즈 게이트**
@@ -78,7 +79,16 @@ DBG에서 보는 핵심:
 공통 환경변수(앱 실행/빌드):
 - `EXPO_PUBLIC_API_URL`: `http://api.dongdong.io:3000/api/v1`
 - `EXPO_PUBLIC_KAKAO_APP_KEY`: 앱별 값(고정)
-- `EXPO_PUBLIC_DEVTOOLS=1` (dev group로 주입)
+
+### 3.1 레일(프로필) 분리 — “AAB는 박아두고, 반복은 APK-DBG만”
+
+- **DEV/폴리싱 레일 (APK-DBG)**: `internal-apk-dev`
+  - 트리거: **push 자동**
+  - `EXPO_PUBLIC_DEVTOOLS=1` (DBG/DEV 레버 ON)
+- **쇼케이스 레일 (AAB/Release)**: `android-aab`
+  - 트리거: **수동 Run만**
+  - `EXPO_PUBLIC_DEVTOOLS=0` (DBG/DEV 레버 OFF, fail-fast)
+  - 원칙: **쇼케이스 AAB는 “한 번 뽑아 박아두고 유지”**한다. 폴리싱 반복 중에는 AAB를 다시 돌리지 않는다.
 
 ---
 
