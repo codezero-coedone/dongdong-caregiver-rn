@@ -48,13 +48,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Hide explore from tab bar */}
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }
