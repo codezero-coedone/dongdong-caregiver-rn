@@ -36,7 +36,7 @@ type JournalListItem = { id: number; date: string };
 
 export default function JournalCreateScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ matchId?: string; date?: string }>();
+  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string }>();
 
   const matchId = useMemo(() => {
     const raw = params.matchId;
@@ -65,7 +65,14 @@ export default function JournalCreateScreen() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [journalId, setJournalId] = useState<number | null>(null);
+
+  const journalIdParam = useMemo(() => {
+    const raw = params.journalId;
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }, [params.journalId]);
+
+  const [journalId, setJournalId] = useState<number | null>(journalIdParam);
 
   useEffect(() => {
     let alive = true;
@@ -77,18 +84,25 @@ export default function JournalCreateScreen() {
       }
       setLoading(true);
       try {
-        const listRes = await apiClient.get('/journals', { params: { matchId } });
-        const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
-        const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
-        if (!found) {
+        let idToFetch: number | null = journalIdParam ?? journalId;
+        if (!idToFetch) {
+          // Fallback: resolve by list when journalId is unknown.
+          const listRes = await apiClient.get('/journals', { params: { matchId } });
+          const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
+          const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
+          if (!found) {
+            if (!alive) return;
+            setJournalId(null);
+            setNotes('');
+            return;
+          }
           if (!alive) return;
-          setJournalId(null);
-          setNotes('');
-          return;
+          idToFetch = found.id;
         }
-        if (!alive) return;
-        setJournalId(found.id);
-        const detailRes = await apiClient.get(`/journals/${found.id}`);
+        if (!idToFetch) return;
+        if (alive) setJournalId(idToFetch);
+
+        const detailRes = await apiClient.get(`/journals/${idToFetch}`);
         const detail = unwrapData<any>((detailRes as any)?.data);
         const existingNotes = typeof detail?.notes === 'string' ? detail.notes : '';
         if (!alive) return;
@@ -102,9 +116,10 @@ export default function JournalCreateScreen() {
     return () => {
       alive = false;
     };
-  }, [matchIdOk, dateOk, matchId, date]);
+  }, [matchIdOk, dateOk, matchId, date, journalIdParam]);
 
   const onSubmit = async () => {
+    if (submitting) return;
     if (!matchIdOk) {
       if (devtools) {
         devlog({

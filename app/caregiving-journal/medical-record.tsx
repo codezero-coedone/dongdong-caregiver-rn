@@ -31,7 +31,7 @@ const MEDICAL_TYPES = ['주사', '약 복용', '병원 방문', '검사', '처�
 
 export default function MedicalRecordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ matchId?: string; date?: string }>();
+  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string }>();
 
   const matchId = useMemo(() => {
     const raw = params.matchId;
@@ -46,6 +46,12 @@ export default function MedicalRecordScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [journalId, setJournalId] = useState<number | null>(null);
 
+  const journalIdParam = useMemo(() => {
+    const raw = params.journalId;
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }, [params.journalId]);
+
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [otherNotes, setOtherNotes] = useState('');
 
@@ -59,16 +65,23 @@ export default function MedicalRecordScreen() {
       }
       setLoading(true);
       try {
-        const listRes = await api.get('/journals', { params: { matchId } });
-        const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
-        const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
-        if (!found) {
-          if (!alive) return;
-          setJournalId(null);
-          return;
+        // Prefer journalId passed from home to avoid list fetch duplication.
+        let idToFetch: number | null = journalIdParam;
+        if (!idToFetch) {
+          const listRes = await api.get('/journals', { params: { matchId } });
+          const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
+          const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
+          if (!found) {
+            if (!alive) return;
+            setJournalId(null);
+            return;
+          }
+          idToFetch = found.id;
         }
-        setJournalId(found.id);
-        const detailRes = await api.get(`/journals/${found.id}`);
+
+        if (!idToFetch) return;
+        if (alive) setJournalId(idToFetch);
+        const detailRes = await api.get(`/journals/${idToFetch}`);
         const detail = unwrapData<JournalDetail>((detailRes as any)?.data);
         const rec = detail?.medicalRecord;
         if (!alive || !rec) return;
@@ -83,7 +96,7 @@ export default function MedicalRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [paramOk, matchId, date]);
+  }, [paramOk, matchId, date, journalIdParam]);
 
   const toggleType = (t: string) => {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -92,6 +105,7 @@ export default function MedicalRecordScreen() {
   const canSave = selectedTypes.length > 0 || otherNotes.trim().length > 0;
 
   const onSave = async () => {
+    if (submitting) return;
     if (!paramOk) {
       if (isDevtoolsEnabled()) {
         devlog({

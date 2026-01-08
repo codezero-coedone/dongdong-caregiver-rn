@@ -550,10 +550,11 @@ export default function CaregivingJournalHome() {
         style={styles.card}
         onPress={() => {
           if (!selectedMatchId) return;
+          const jid = typeof journal?.id === 'number' ? journal.id : '';
           router.push(
             `/caregiving-journal/meal-record?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}&time=${keyName}`,
+            )}&date=${encodeURIComponent(selectedDate)}&time=${keyName}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
           );
         }}
       >
@@ -611,10 +612,11 @@ export default function CaregivingJournalHome() {
         style={styles.card}
         onPress={() => {
           if (!selectedMatchId) return;
+          const jid = typeof journal?.id === 'number' ? journal.id : '';
           router.push(
             `/caregiving-journal/medical-record?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}`,
+            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
           );
         }}
       >
@@ -654,10 +656,11 @@ export default function CaregivingJournalHome() {
         style={styles.card}
         onPress={() => {
           if (!selectedMatchId) return;
+          const jid = typeof journal?.id === 'number' ? journal.id : '';
           router.push(
             `/caregiving-journal/activity-record?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}`,
+            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
           );
         }}
       >
@@ -684,10 +687,11 @@ export default function CaregivingJournalHome() {
         style={styles.card}
         onPress={() => {
           if (!selectedMatchId) return;
+          const jid = typeof journal?.id === 'number' ? journal.id : '';
           router.push(
             `/caregiving-journal/new?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}`,
+            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
           );
         }}
       >

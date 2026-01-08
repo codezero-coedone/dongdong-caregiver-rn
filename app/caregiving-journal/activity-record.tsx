@@ -66,7 +66,7 @@ const SegmentedControl = ({
 
 export default function ActivityRecordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ matchId?: string; date?: string }>();
+  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string }>();
 
   const matchId = useMemo(() => {
     const raw = params.matchId;
@@ -80,6 +80,12 @@ export default function ActivityRecordScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [journalId, setJournalId] = useState<number | null>(null);
+
+  const journalIdParam = useMemo(() => {
+    const raw = params.journalId;
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }, [params.journalId]);
 
   const [exercise, setExercise] = useState<Status>('caution');
   const [sleep, setSleep] = useState<Status>('caution');
@@ -95,16 +101,23 @@ export default function ActivityRecordScreen() {
       }
       setLoading(true);
       try {
-        const listRes = await api.get('/journals', { params: { matchId } });
-        const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
-        const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
-        if (!found) {
-          if (!alive) return;
-          setJournalId(null);
-          return;
+        // Prefer journalId passed from home to avoid list fetch duplication.
+        let idToFetch: number | null = journalIdParam;
+        if (!idToFetch) {
+          const listRes = await api.get('/journals', { params: { matchId } });
+          const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
+          const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
+          if (!found) {
+            if (!alive) return;
+            setJournalId(null);
+            return;
+          }
+          idToFetch = found.id;
         }
-        setJournalId(found.id);
-        const detailRes = await api.get(`/journals/${found.id}`);
+
+        if (!idToFetch) return;
+        if (alive) setJournalId(idToFetch);
+        const detailRes = await api.get(`/journals/${idToFetch}`);
         const detail = unwrapData<JournalDetail>((detailRes as any)?.data);
         const rec = detail?.activityRecord;
         if (!alive || !rec) return;
@@ -120,9 +133,10 @@ export default function ActivityRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [paramOk, matchId, date]);
+  }, [paramOk, matchId, date, journalIdParam]);
 
   const onSave = async () => {
+    if (submitting) return;
     if (!paramOk) {
       if (isDevtoolsEnabled()) {
         devlog({

@@ -67,6 +67,7 @@ export default function MealRecordScreen() {
     matchId?: string;
     date?: string;
     time?: 'morning' | 'lunch' | 'dinner';
+    journalId?: string;
   }>();
 
   const matchId = useMemo(() => {
@@ -96,6 +97,12 @@ export default function MealRecordScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [journalId, setJournalId] = useState<number | null>(null);
 
+  const journalIdParam = useMemo(() => {
+    const raw = params.journalId;
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) ? n : null;
+  }, [params.journalId]);
+
   const [status, setStatus] = useState<Status>('caution');
   const [mealType, setMealType] = useState<string>('');
 
@@ -124,17 +131,23 @@ export default function MealRecordScreen() {
       }
       setLoading(true);
       try {
-        const listRes = await api.get('/journals', { params: { matchId } });
-        const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
-        const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
-        if (!found) {
-          if (!alive) return;
-          setJournalId(null);
-          return;
+        // Prefer journalId passed from home to avoid list fetch duplication.
+        let idToFetch: number | null = journalIdParam;
+        if (!idToFetch) {
+          const listRes = await api.get('/journals', { params: { matchId } });
+          const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
+          const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
+          if (!found) {
+            if (!alive) return;
+            setJournalId(null);
+            return;
+          }
+          idToFetch = found.id;
         }
-        setJournalId(found.id);
 
-        const detailRes = await api.get(`/journals/${found.id}`);
+        if (!idToFetch) return;
+        if (alive) setJournalId(idToFetch);
+        const detailRes = await api.get(`/journals/${idToFetch}`);
         const detail = unwrapData<JournalDetail>((detailRes as any)?.data);
         const existing = (detail as any)?.[mealKey] as MealRecord | undefined;
         if (!existing || !alive) return;
@@ -163,13 +176,14 @@ export default function MealRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [paramOk, matchId, date, mealKey]);
+  }, [paramOk, matchId, date, mealKey, journalIdParam]);
 
   const toggleTag = (t: string) => {
     setUrinationTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   };
 
   const onSave = async () => {
+    if (submitting) return;
     if (!paramOk) {
       if (isDevtoolsEnabled()) {
         devlog({
