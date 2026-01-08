@@ -1,4 +1,5 @@
 import apiClient from '@/services/apiClient';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -58,6 +59,9 @@ export default function JournalCreateScreen() {
   };
 
   const [date, setDate] = useState(fixedDateParam ?? todayYmd());
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const matchIdOk = matchId != null;
+  const devtools = isDevtoolsEnabled();
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +70,7 @@ export default function JournalCreateScreen() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!matchId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      if (!matchIdOk || !dateOk) {
         if (!alive) return;
         setLoading(false);
         return;
@@ -98,15 +102,33 @@ export default function JournalCreateScreen() {
     return () => {
       alive = false;
     };
-  }, [matchId, date]);
+  }, [matchIdOk, dateOk, matchId, date]);
 
   const onSubmit = async () => {
-    if (!matchId) {
-      Alert.alert('오류', 'matchId가 없습니다. 매칭을 선택한 뒤 작성해 주세요.');
+    if (!matchIdOk) {
+      if (devtools) {
+        devlog({
+          scope: 'NAV',
+          level: 'warn',
+          message: 'journal: notes missing matchId',
+          meta: { matchId: params.matchId, date: params.date },
+        });
+      }
+      Alert.alert('진입 오류', '선택된 환자가 없습니다.\n이전 화면에서 다시 선택해주세요.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert('오류', '날짜는 YYYY-MM-DD 형식이어야 합니다.');
+    if (!dateOk) {
+      if (devtools) {
+        devlog({
+          scope: 'NAV',
+          level: 'warn',
+          message: 'journal: notes invalid date',
+          meta: { date },
+        });
+      }
+      Alert.alert('날짜 확인', '날짜 형식을 확인해주세요.\n예) 2026-01-08');
       return;
     }
 
@@ -181,12 +203,14 @@ export default function JournalCreateScreen() {
             </Text>
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>매칭 ID</Text>
-            <View style={styles.readonly}>
-              <Text style={styles.readonlyText}>{matchId ?? '-'}</Text>
+          {devtools && (
+            <View style={styles.field}>
+              <Text style={styles.label}>매칭 ID (DBG)</Text>
+              <View style={styles.readonly}>
+                <Text style={styles.readonlyText}>{matchId ?? '-'}</Text>
+              </View>
             </View>
-          </View>
+          )}
 
           <View style={styles.field}>
             <Text style={styles.label}>날짜 *</Text>

@@ -1,4 +1,5 @@
 import api from '@/services/apiClient';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -76,6 +77,8 @@ export default function MealRecordScreen() {
 
   const date = useMemo(() => String(params.date || ''), [params.date]);
   const mealTime = (params.time || 'morning') as 'morning' | 'lunch' | 'dinner';
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const paramOk = Boolean(matchId && dateOk);
 
   const mealKey = useMemo(() => {
     if (mealTime === 'morning') return 'breakfast' as const;
@@ -114,7 +117,7 @@ export default function MealRecordScreen() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!matchId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      if (!paramOk) {
         if (!alive) return;
         setLoading(false);
         return;
@@ -160,19 +163,25 @@ export default function MealRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [matchId, date, mealKey]);
+  }, [paramOk, matchId, date, mealKey]);
 
   const toggleTag = (t: string) => {
     setUrinationTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   };
 
   const onSave = async () => {
-    if (!matchId) {
-      Alert.alert('오류', 'matchId가 없습니다.');
-      return;
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert('오류', 'date가 없습니다.');
+    if (!paramOk) {
+      if (isDevtoolsEnabled()) {
+        devlog({
+          scope: 'NAV',
+          level: 'warn',
+          message: 'journal: meal-record invalid params',
+          meta: { matchId: params.matchId, date: params.date, time: params.time },
+        });
+      }
+      Alert.alert('진입 오류', '일지 화면 정보를 확인할 수 없습니다.\n이전 화면으로 돌아갑니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
       return;
     }
     if (!mealType) {
@@ -236,6 +245,24 @@ export default function MealRecordScreen() {
       setSubmitting(false);
     }
   };
+
+  if (!paramOk) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.center}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 }}>
+            일지 화면을 열 수 없습니다
+          </Text>
+          <Text style={{ color: '#6B7280', textAlign: 'center', marginBottom: 16 }}>
+            진입 정보가 확인되지 않습니다.{'\n'}이전 화면으로 돌아가 다시 시도해주세요.
+          </Text>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>돌아가기</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const Chip = ({
     label,
@@ -481,6 +508,13 @@ export default function MealRecordScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  backBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  backBtnText: { color: '#fff', fontWeight: '700' },
   content: { padding: 20 },
 
   pageTitle: { fontSize: 18, fontWeight: '800', color: '#111827', textAlign: 'center', marginBottom: 14 },

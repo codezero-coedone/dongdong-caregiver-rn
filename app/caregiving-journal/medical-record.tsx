@@ -1,4 +1,5 @@
 import api from '@/services/apiClient';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -38,6 +39,8 @@ export default function MedicalRecordScreen() {
     return Number.isFinite(n) ? n : null;
   }, [params.matchId]);
   const date = useMemo(() => String(params.date || ''), [params.date]);
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const paramOk = Boolean(matchId && dateOk);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -49,7 +52,7 @@ export default function MedicalRecordScreen() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      if (!matchId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      if (!paramOk) {
         if (!alive) return;
         setLoading(false);
         return;
@@ -80,7 +83,7 @@ export default function MedicalRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [matchId, date]);
+  }, [paramOk, matchId, date]);
 
   const toggleType = (t: string) => {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -89,12 +92,18 @@ export default function MedicalRecordScreen() {
   const canSave = selectedTypes.length > 0 || otherNotes.trim().length > 0;
 
   const onSave = async () => {
-    if (!matchId) {
-      Alert.alert('오류', 'matchId가 없습니다.');
-      return;
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      Alert.alert('오류', 'date가 없습니다.');
+    if (!paramOk) {
+      if (isDevtoolsEnabled()) {
+        devlog({
+          scope: 'NAV',
+          level: 'warn',
+          message: 'journal: medical-record invalid params',
+          meta: { matchId: params.matchId, date: params.date },
+        });
+      }
+      Alert.alert('진입 오류', '일지 화면 정보를 확인할 수 없습니다.\n이전 화면으로 돌아갑니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
       return;
     }
     if (!canSave) {
@@ -140,6 +149,24 @@ export default function MedicalRecordScreen() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.center}>
           <Text style={{ color: '#6B7280' }}>불러오는 중…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!paramOk) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.center}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8 }}>
+            일지 화면을 열 수 없습니다
+          </Text>
+          <Text style={{ color: '#6B7280', textAlign: 'center', marginBottom: 16 }}>
+            진입 정보가 확인되지 않습니다.{'\n'}이전 화면으로 돌아가 다시 시도해주세요.
+          </Text>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backBtnText}>돌아가기</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -207,6 +234,13 @@ export default function MedicalRecordScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  backBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  backBtnText: { color: '#fff', fontWeight: '700' },
   content: { padding: 20 },
   sectionTitle: { fontSize: 20, fontWeight: '600', color: '#000000', marginBottom: 20 },
 
