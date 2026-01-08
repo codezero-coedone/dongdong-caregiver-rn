@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Alert, Keyboard, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { devlog, isDevtoolsEnabled } from '@/services/devlog';
@@ -200,15 +200,13 @@ export default function PermissionScreen() {
           선택 권한의 경우 허용하지 않으셔도 앱 이용은 가능하나, 일부 서비스
           이용에 제한이 있을 수 있습니다.
         </Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermissions} activeOpacity={0.9}>
-          <Text style={styles.buttonText}>권한 요청</Text>
-        </TouchableOpacity>
+        {/* Design: single primary CTA (confirm) */}
         <TouchableOpacity
-          style={[styles.button, styles.buttonGhost]}
-          onPress={() => void continueAnyway()}
+          style={styles.button}
+          onPress={() => void requestPermissions()}
           activeOpacity={0.9}
         >
-          <Text style={[styles.buttonText, styles.buttonTextGhost]}>계속</Text>
+          <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
