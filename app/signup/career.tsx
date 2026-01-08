@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import {
   Alert,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -79,6 +80,26 @@ export default function CareerScreen() {
 
   const handleImageUpload = async (certId: string) => {
     try {
+      // JIT permission: request only when user actually tries to upload/select an image.
+      // (iOS can fail/crash without UsageDescription; we keep app.json infoPlist in sync.)
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const granted =
+        Boolean((perm as any)?.granted) ||
+        String((perm as any)?.status || '').toLowerCase() === 'granted' ||
+        String((perm as any)?.accessPrivileges || '').toLowerCase() === 'all' ||
+        String((perm as any)?.accessPrivileges || '').toLowerCase() === 'limited';
+      if (!granted) {
+        Alert.alert(
+          '권한 필요',
+          '자격증 사진을 선택하려면 사진 접근 권한이 필요합니다.\n설정에서 사진 권한을 허용해 주세요.',
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '설정 열기', onPress: () => Linking.openSettings().catch(() => {}) },
+          ],
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
