@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/authStore';
 
 type CaregiverProfile = {
   id: number;
@@ -42,6 +43,7 @@ function unwrapData<T>(resData: unknown): T {
 }
 
 export default function ReviewsScreen() {
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<CaregiverProfile | null>(null);
@@ -61,6 +63,16 @@ export default function ReviewsScreen() {
     let alive = true;
     setLoading(true);
     setError(null);
+    if (!isLoggedIn) {
+      // Guard: never call protected endpoints when not authenticated.
+      setProfile(null);
+      setRows([]);
+      setLoading(false);
+      setError('로그인이 필요합니다.');
+      return () => {
+        alive = false;
+      };
+    }
     (async () => {
       try {
         const profRes = await apiClient.get('/caregivers/profile');
@@ -86,7 +98,7 @@ export default function ReviewsScreen() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [isLoggedIn]);
 
   const renderStars = (rating: number) =>
     Array(5)

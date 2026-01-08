@@ -16,6 +16,7 @@ import Button from '../../components/ui/Button';
 import FileUploadBox from '../../components/ui/FileUploadBox';
 import Input from '../../components/ui/Input';
 import { apiClient } from '@/services/apiClient';
+import { useAuthStore } from '@/store/authStore';
 
 type Profile = {
   id: number;
@@ -46,6 +47,7 @@ const CERTIFICATES = [
 
 export default function ProfileEditScreen() {
   const router = useRouter();
+  const isLoggedIn = useAuthStore((s: any) => s.isLoggedIn);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState<boolean>(true);
@@ -100,6 +102,15 @@ export default function ProfileEditScreen() {
     let alive = true;
     setLoadingProfile(true);
     setProfileError(null);
+    if (!isLoggedIn) {
+      // Guard: never call protected endpoints when not authenticated.
+      setProfile(null);
+      setLoadingProfile(false);
+      setProfileError('로그인이 필요합니다.');
+      return () => {
+        alive = false;
+      };
+    }
     (async () => {
       try {
         const res = await apiClient.get('/caregivers/profile');
@@ -125,7 +136,7 @@ export default function ProfileEditScreen() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [isLoggedIn]);
 
   const handleFileUpload = async () => {
     try {

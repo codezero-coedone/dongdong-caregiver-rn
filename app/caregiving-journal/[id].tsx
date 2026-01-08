@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuthStore } from '@/store/authStore';
 
 type MealRecord = {
   amount: 'NONE' | 'LITTLE' | 'HALF' | 'FULL';
@@ -50,6 +51,7 @@ function unwrapData<T>(resData: unknown): T {
 export default function JournalDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [row, setRow] = useState<JournalDetail | null>(null);
@@ -58,6 +60,15 @@ export default function JournalDetailScreen() {
     let alive = true;
     setLoading(true);
     setError(null);
+    if (!isLoggedIn) {
+      // Guard: never call protected endpoints when not authenticated.
+      setRow(null);
+      setLoading(false);
+      setError('로그인이 필요합니다.');
+      return () => {
+        alive = false;
+      };
+    }
     (async () => {
       try {
         const res = await apiClient.get(`/journals/${id}`);
@@ -77,7 +88,7 @@ export default function JournalDetailScreen() {
     return () => {
       alive = false;
     };
-  }, [id]);
+  }, [id, isLoggedIn]);
 
   const formatYmd = (iso: string | null | undefined): string => {
     if (!iso) return '-';
