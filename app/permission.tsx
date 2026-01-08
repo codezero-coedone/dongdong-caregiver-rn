@@ -1,8 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Camera from 'expo-camera';
-import * as Contacts from 'expo-contacts';
-import * as Location from 'expo-location';
-import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { Keyboard, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -76,69 +72,15 @@ export default function PermissionScreen() {
     } catch {
       // ignore
     }
+    if (DEVTOOLS_ENABLED) {
+      devlog({ scope: 'NAV', level: 'info', message: 'permission: acknowledge -> next' });
+    }
     router.replace(nextPath);
   };
 
-  const requestPermissions = async () => {
-    // Policy:
-    // - Permissions are optional for DEV flow (we must never block progress).
-    // - Some Expo permission APIs can throw depending on OS/vendor quirks.
-    // - Always log details to DEV TRACE (when enabled) and continue.
-    const results: Record<string, string> = {};
-    let hadError = false;
-
-    const safeStatus = (s: any) => (typeof s === 'string' && s ? s : 'unknown');
-    const safeErr = (e: any) =>
-      String(e?.message || e?.nativeEvent?.message || e?.toString?.() || e || 'error');
-
-    // 1) Location
-    try {
-      const r = await Location.requestForegroundPermissionsAsync();
-      results.location = safeStatus((r as any)?.status);
-    } catch (e) {
-      hadError = true;
-      results.location = `ERR:${safeErr(e)}`;
-    }
-
-    // 2) Camera
-    try {
-      const r = await Camera.requestCameraPermissionsAsync();
-      results.camera = safeStatus((r as any)?.status);
-    } catch (e) {
-      hadError = true;
-      results.camera = `ERR:${safeErr(e)}`;
-    }
-
-    // 3) Media Library (Storage)
-    try {
-      const r = await MediaLibrary.requestPermissionsAsync();
-      results.media = safeStatus((r as any)?.status);
-    } catch (e) {
-      hadError = true;
-      results.media = `ERR:${safeErr(e)}`;
-    }
-
-    // 4) Contacts
-    try {
-      const r = await Contacts.requestPermissionsAsync();
-      results.contacts = safeStatus((r as any)?.status);
-    } catch (e) {
-      hadError = true;
-      results.contacts = `ERR:${safeErr(e)}`;
-    }
-
-    if (DEVTOOLS_ENABLED) {
-      devlog({
-        scope: 'SYS',
-        level: hadError ? 'warn' : 'info',
-        message: hadError ? 'permissions: requested (partial error)' : 'permissions: requested',
-        meta: results,
-      });
-    }
-
-    // Never block onboarding with a modal alert. If something fails, we just proceed.
-    await continueAnyway();
-  };
+  // NOTE(SEALED UX): 선택 권한은 “필요 시점(기능 진입 시)”에만 요청한다.
+  // - 온보딩 권한 페이지는 안내(1회) 역할만 수행 (팝업 폭탄 방지)
+  // - 실제 권한 요청은 각 기능에서 JIT 방식으로 수행
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -203,7 +145,7 @@ export default function PermissionScreen() {
         {/* Design: single primary CTA (confirm) */}
         <TouchableOpacity
           style={styles.button}
-          onPress={() => void requestPermissions()}
+          onPress={() => void continueAnyway()}
           activeOpacity={0.9}
         >
           <Text style={styles.buttonText}>확인</Text>
