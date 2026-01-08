@@ -31,7 +31,7 @@ const MEDICAL_TYPES = ['주사', '약 복용', '병원 방문', '검사', '처�
 
 export default function MedicalRecordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string }>();
+  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string; hasJournal?: string }>();
 
   const matchId = useMemo(() => {
     const raw = params.matchId;
@@ -52,6 +52,13 @@ export default function MedicalRecordScreen() {
     return Number.isFinite(n) ? n : null;
   }, [params.journalId]);
 
+  const hasJournalParam = useMemo(() => {
+    const raw = params.hasJournal;
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+    return null;
+  }, [params.hasJournal]);
+
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [otherNotes, setOtherNotes] = useState('');
 
@@ -60,6 +67,13 @@ export default function MedicalRecordScreen() {
     (async () => {
       if (!paramOk) {
         if (!alive) return;
+        setLoading(false);
+        return;
+      }
+      // If home already knows "no journal for this day", skip list/detail prefetch (network 0).
+      if (hasJournalParam === false) {
+        if (!alive) return;
+        setJournalId(null);
         setLoading(false);
         return;
       }
@@ -96,7 +110,7 @@ export default function MedicalRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [paramOk, matchId, date, journalIdParam]);
+  }, [paramOk, matchId, date, journalIdParam, hasJournalParam]);
 
   const toggleType = (t: string) => {
     setSelectedTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));

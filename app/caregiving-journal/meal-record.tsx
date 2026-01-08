@@ -68,6 +68,7 @@ export default function MealRecordScreen() {
     date?: string;
     time?: 'morning' | 'lunch' | 'dinner';
     journalId?: string;
+    hasJournal?: string;
   }>();
 
   const matchId = useMemo(() => {
@@ -103,6 +104,13 @@ export default function MealRecordScreen() {
     return Number.isFinite(n) ? n : null;
   }, [params.journalId]);
 
+  const hasJournalParam = useMemo(() => {
+    const raw = params.hasJournal;
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+    return null;
+  }, [params.hasJournal]);
+
   const [status, setStatus] = useState<Status>('caution');
   const [mealType, setMealType] = useState<string>('');
 
@@ -126,6 +134,13 @@ export default function MealRecordScreen() {
     (async () => {
       if (!paramOk) {
         if (!alive) return;
+        setLoading(false);
+        return;
+      }
+      // If home already knows "no journal for this day", skip list/detail prefetch (network 0).
+      if (hasJournalParam === false) {
+        if (!alive) return;
+        setJournalId(null);
         setLoading(false);
         return;
       }
@@ -176,7 +191,7 @@ export default function MealRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [paramOk, matchId, date, mealKey, journalIdParam]);
+  }, [paramOk, matchId, date, mealKey, journalIdParam, hasJournalParam]);
 
   const toggleTag = (t: string) => {
     setUrinationTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));

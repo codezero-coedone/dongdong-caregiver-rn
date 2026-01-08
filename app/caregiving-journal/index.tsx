@@ -554,7 +554,7 @@ export default function CaregivingJournalHome() {
           router.push(
             `/caregiving-journal/meal-record?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}&time=${keyName}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
+            )}&date=${encodeURIComponent(selectedDate)}&time=${keyName}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}&hasJournal=${jid ? '1' : '0'}`,
           );
         }}
       >
@@ -616,7 +616,7 @@ export default function CaregivingJournalHome() {
           router.push(
             `/caregiving-journal/medical-record?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
+            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}&hasJournal=${jid ? '1' : '0'}`,
           );
         }}
       >
@@ -660,7 +660,7 @@ export default function CaregivingJournalHome() {
           router.push(
             `/caregiving-journal/activity-record?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
+            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}&hasJournal=${jid ? '1' : '0'}`,
           );
         }}
       >
@@ -691,7 +691,7 @@ export default function CaregivingJournalHome() {
           router.push(
             `/caregiving-journal/new?matchId=${String(
               selectedMatchId,
-            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}`,
+            )}&date=${encodeURIComponent(selectedDate)}${jid ? `&journalId=${encodeURIComponent(String(jid))}` : ''}&hasJournal=${jid ? '1' : '0'}`,
           );
         }}
       >

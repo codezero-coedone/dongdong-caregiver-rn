@@ -36,7 +36,7 @@ type JournalListItem = { id: number; date: string };
 
 export default function JournalCreateScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string }>();
+  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string; hasJournal?: string }>();
 
   const matchId = useMemo(() => {
     const raw = params.matchId;
@@ -74,11 +74,26 @@ export default function JournalCreateScreen() {
 
   const [journalId, setJournalId] = useState<number | null>(journalIdParam);
 
+  const hasJournalParam = useMemo(() => {
+    const raw = params.hasJournal;
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+    return null;
+  }, [params.hasJournal]);
+
   useEffect(() => {
     let alive = true;
     (async () => {
       if (!matchIdOk || !dateOk) {
         if (!alive) return;
+        setLoading(false);
+        return;
+      }
+      // If home already knows "no journal for this day", skip list/detail prefetch (network 0).
+      if (hasJournalParam === false) {
+        if (!alive) return;
+        setJournalId(null);
+        setNotes('');
         setLoading(false);
         return;
       }
@@ -116,7 +131,7 @@ export default function JournalCreateScreen() {
     return () => {
       alive = false;
     };
-  }, [matchIdOk, dateOk, matchId, date, journalIdParam]);
+  }, [matchIdOk, dateOk, matchId, date, journalIdParam, hasJournalParam]);
 
   const onSubmit = async () => {
     if (submitting) return;

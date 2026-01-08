@@ -66,7 +66,7 @@ const SegmentedControl = ({
 
 export default function ActivityRecordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string }>();
+  const params = useLocalSearchParams<{ matchId?: string; date?: string; journalId?: string; hasJournal?: string }>();
 
   const matchId = useMemo(() => {
     const raw = params.matchId;
@@ -87,6 +87,13 @@ export default function ActivityRecordScreen() {
     return Number.isFinite(n) ? n : null;
   }, [params.journalId]);
 
+  const hasJournalParam = useMemo(() => {
+    const raw = params.hasJournal;
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+    return null;
+  }, [params.hasJournal]);
+
   const [exercise, setExercise] = useState<Status>('caution');
   const [sleep, setSleep] = useState<Status>('caution');
   const [otherNotes, setOtherNotes] = useState('');
@@ -96,6 +103,13 @@ export default function ActivityRecordScreen() {
     (async () => {
       if (!paramOk) {
         if (!alive) return;
+        setLoading(false);
+        return;
+      }
+      // If home already knows "no journal for this day", skip list/detail prefetch (network 0).
+      if (hasJournalParam === false) {
+        if (!alive) return;
+        setJournalId(null);
         setLoading(false);
         return;
       }
@@ -133,7 +147,7 @@ export default function ActivityRecordScreen() {
     return () => {
       alive = false;
     };
-  }, [paramOk, matchId, date, journalIdParam]);
+  }, [paramOk, matchId, date, journalIdParam, hasJournalParam]);
 
   const onSave = async () => {
     if (submitting) return;
