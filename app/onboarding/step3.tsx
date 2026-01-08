@@ -24,6 +24,14 @@ import { useAuthStore } from '@/store/authStore';
 import type { AxiosError } from 'axios';
 import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 
+/**
+ * ============================================
+ * QA SEALED (UI LOCK) — DO NOT CHANGE VISUALS
+ * ============================================
+ * 온보딩 3페이지(로그인) 디자인은 QA 박제(고정)로 취급한다.
+ * - 레이아웃/문구/간격/이미지 등 "시각 요소" 변경 금지
+ * - 허용: 기능 수정(로그인 동작/에러 처리/DBG 로그)만 최소 diff로
+ */
 export default function Step3() {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
