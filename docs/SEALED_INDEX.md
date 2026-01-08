@@ -42,6 +42,9 @@
 8. **POLISH_RAIL (UX 폴리싱 레일, 봉인)**  
    - `docs/SEALED/POLISH_RAIL-v0.1.md`
 
+9. **SSOT-UI Contract (피그마 스냅샷 → 구현 규격, 봉인)**  
+   - `docs/SEALED/SSOT_UI_CONTRACT-v0.1.md`
+
 ---
 
 ## ARCHIVE (참고만, 실행 기준 아님)
