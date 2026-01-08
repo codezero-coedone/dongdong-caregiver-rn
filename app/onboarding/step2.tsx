@@ -24,14 +24,13 @@ export default function Index() {
       </View>
 
       {/* 본문 */}
-      <View style={styles.content}>
-        {/* UX: tap anywhere to proceed (button still works) */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="계속"
-          onPress={() => router.push('/permission?next=/onboarding/step3')}
-          style={StyleSheet.absoluteFill}
-        />
+      {/* UX: tap anywhere to proceed — avoid absolute overlay layers */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="계속"
+        onPress={() => router.push('/permission?next=/onboarding/step3')}
+        style={styles.content}
+      >
         {/* 타이틀 */}
         <Text style={styles.title}>실시간 확인으로 안심</Text>
 
@@ -54,7 +53,7 @@ export default function Index() {
         <View style={{ flex: 1 }} />
 
         {/* CTA 제거: 화면 탭으로 자연스럽게 진행 */}
-      </View>
+      </Pressable>
     </SafeAreaView>
   );
 }
