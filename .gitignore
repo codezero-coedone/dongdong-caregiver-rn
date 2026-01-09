@@ -36,6 +36,9 @@ yarn-error.*
 # local env files
 .env*.local
 
+# SEALED (local-only ops docs)
+docs/SEALED/OPS_SERVER_ACCESS_RUNBOOK-*.md
+
 # typescript
 *.tsbuildinfo
 
