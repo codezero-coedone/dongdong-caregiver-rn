@@ -38,7 +38,7 @@
 
 7. **OPS 레이아웃(서버 역할/디렉토리 분리 봉인)**  
    - `docs/SEALED/OPS_LAYOUT-v0.1.md`
-   - `docs/SEALED/OPS_SERVER_ACCESS_RUNBOOK-v0.1.md`
+   - (로컬 봉인) `docs/SEALED/OPS_SERVER_ACCESS_RUNBOOK-v0.1.md`
 
 8. **POLISH_RAIL (UX 폴리싱 레일, 봉인)**  
    - `docs/SEALED/POLISH_RAIL-v0.1.md`
