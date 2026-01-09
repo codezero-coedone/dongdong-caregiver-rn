@@ -7,14 +7,21 @@
 
 ## 1) SSOT / 구조 (변경 금지)
 
-- **Caregiver Repo (임시/빌드용)**: `codezero-coedone/dongdong-caregiver-rn`
+- **Caregiver Repo (CM = 전투/DEV 트레일)**: `codezero-coedone/dongdong-caregiver-rn`
   - 로컬 경로: `gitwork/dongdong-caregiver-rn`
   - CI 설정 파일: `gitwork/dongdong-caregiver-rn/codemagic.yaml`
-- **Guardian Repo (임시/빌드용)**: `codezero-coedone/dongdong-rn`
+- **Guardian Repo (CM = 전투/DEV 트레일)**: `codezero-coedone/dongdong-rn`
   - 로컬 경로: `gitwork/dongdong-rn`
   - CI 설정 파일: `gitwork/dongdong-rn/codemagic.yaml`
 
+- **Z21(SSOT = 릴리즈/배포 기준선)**:
+  - `Z21-ZeroToOne/dongdong-caregiver-rn`
+  - `Z21-ZeroToOne/dongdong-rn`
+  - `Z21-ZeroToOne/dongdong-client`
+  - `Z21-ZeroToOne/dongdong-nest`
+
 원칙:
+- **서버 배포는 Z21 기준선만** 본다(CM에서 검증 후 Z21로 승격 → 배포).
 - **서명키/비밀번호/민감정보는 git에 절대 커밋 금지**
 - `*.jks`는 repo `.gitignore`로 항상 제외
 

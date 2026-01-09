@@ -10,7 +10,6 @@
 ## 0) Live URLs (DEV)
 
 - **API Base (domain)**: `http://api.dongdong.io:3000`
-- **API Base (ip)**: `http://156.228.169.106:3000`
 - **/dev alias**: `http://api.dongdong.io:3000/dev` (same API/Swagger; path rewrite)
 - **/dev/v1 alias**: `http://api.dongdong.io:3000/dev/v1` → `/api/v1` (PM 편의 경로; server-side rewrite)
 - **Health**: `GET /api/v1/health`
@@ -89,7 +88,6 @@
 
 ## 4) 운영/배포 기준 (DEV)
 
-- DB Host: `156.228.169.105:5432`
-- API Host: `api.dongdong.io:3000` (ip: `156.228.169.106:3000`)
+- API Host: `api.dongdong.io:3000`
 - 주의: DEV는 **80/443 리버스프록시 없이 3000 포트로만** 외부 접근됩니다. (클라이언트 baseURL에 `:3000` 포함 필요)
 

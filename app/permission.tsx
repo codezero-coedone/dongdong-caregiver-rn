@@ -6,6 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 
+// Shared gate flag (aligned with Guardian + SEALED docs).
+const ONBOARDING_COMPLETE_KEY = 'onboarding_complete';
+// Legacy key kept for migration (older builds wrote this).
+const LEGACY_ONBOARDING_PERMISSION_COMPLETE_KEY = 'onboarding_permission_complete';
+
 // Define permission types
 type PermissionItemProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -50,9 +55,24 @@ export default function PermissionScreen() {
     let mounted = true;
     const run = async () => {
       try {
-        const v = await SecureStore.getItemAsync('onboarding_permission_complete');
+        const v = await SecureStore.getItemAsync(ONBOARDING_COMPLETE_KEY);
         if (!mounted) return;
         if (v === '1' || v === 'true') {
+          router.replace(nextPath);
+          return;
+        }
+
+        // Migration: old builds stored a different key; accept it and upgrade in-place.
+        const legacy = await SecureStore.getItemAsync(
+          LEGACY_ONBOARDING_PERMISSION_COMPLETE_KEY,
+        );
+        if (!mounted) return;
+        if (legacy === '1' || legacy === 'true') {
+          try {
+            await SecureStore.setItemAsync(ONBOARDING_COMPLETE_KEY, '1');
+          } catch {
+            // ignore
+          }
           router.replace(nextPath);
         }
       } catch {
@@ -68,7 +88,9 @@ export default function PermissionScreen() {
   const continueAnyway = async () => {
     // Deterministic escape hatch: permission step must never block onboarding.
     try {
-      await SecureStore.setItemAsync('onboarding_permission_complete', '1');
+      // Write both keys once (forward/backward compatible).
+      await SecureStore.setItemAsync(ONBOARDING_COMPLETE_KEY, '1');
+      await SecureStore.setItemAsync(LEGACY_ONBOARDING_PERMISSION_COMPLETE_KEY, '1');
     } catch {
       // ignore
     }

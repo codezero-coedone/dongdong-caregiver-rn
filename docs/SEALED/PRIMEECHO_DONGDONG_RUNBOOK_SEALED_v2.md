@@ -11,13 +11,18 @@
 
 ## 0) SSOT 구조(고정)
 
-- **Caregiver RN repo**: `codezero-coedone/dongdong-caregiver-rn`
+- **Caregiver RN repo (CM = 전투/DEV 트레일)**: `codezero-coedone/dongdong-caregiver-rn`
   - 로컬: `gitwork/dongdong-caregiver-rn`
   - CI: `gitwork/dongdong-caregiver-rn/codemagic.yaml`
-- **Guardian RN repo**: `codezero-coedone/dongdong-rn`
+- **Guardian RN repo (CM = 전투/DEV 트레일)**: `codezero-coedone/dongdong-rn`
   - 로컬: `gitwork/dongdong-rn`
   - CI: `gitwork/dongdong-rn/codemagic.yaml`
-- **Backend (Nest)**: 서버에 배포된 도커 기준
+- **Z21(SSOT = 릴리즈/배포 기준선)**:
+  - `Z21-ZeroToOne/dongdong-caregiver-rn`
+  - `Z21-ZeroToOne/dongdong-rn`
+  - `Z21-ZeroToOne/dongdong-client`
+  - `Z21-ZeroToOne/dongdong-nest`
+- **Backend (Nest)**: 서버에 배포된 도커 기준 (**배포 소스는 Z21만**)
   - API: `http://api.dongdong.io:3000/api/v1`
 
 ---
