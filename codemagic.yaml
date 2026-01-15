@@ -304,8 +304,8 @@ workflows:
         credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
         # Internal testing track
         track: internal
-        # Play Console can require draft releases while the app is still in "draft" state.
-        submit_as_draft: true
+        # Auto-deliver to internal testing track (avoid "임시"/draft mismatch)
+        submit_as_draft: false
 
   android_caregiver_aab_universal_apk_test:
     name: caregiver-aab-universal-apk-test
