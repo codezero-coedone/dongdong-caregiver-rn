@@ -77,12 +77,16 @@ workflows:
             const j=JSON.parse(fs.readFileSync(p,'utf8'));
             // SEALED: vc+1 rail
             // - Two apps must both increment by +1 each build (vc+1 x2).
-            // - Codemagic build number is monotonic per app, so versionCode := VC_BASE + CM_BUILD_NUMBER.
+            // - Some Codemagic projects/workflows can restart CM_BUILD_NUMBER, causing Play versionCode reuse.
+            // - So we also take epoch seconds and use the larger of:
+            //   - VC_BASE + CM_BUILD_NUMBER
+            //   - nowEpochSeconds
             const base=Number(process.env.VC_BASE||0);
             const bn=Number(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||0);
             if (!(Number.isFinite(base) && base>0)) throw new Error('invalid VC_BASE='+base);
             if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid BUILD_NUMBER='+String(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||''));
-            const vc=base + bn;
+            const now=Math.floor(Date.now()/1000);
+            const vc=Math.max(base + bn, now);
             if (!(Number.isFinite(vc) && vc > 0 && vc < 2100000000)) throw new Error('invalid versionCode='+vc);
             j.expo=j.expo||{};
             j.expo.android=j.expo.android||{};
@@ -304,8 +308,9 @@ workflows:
         credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS
         # Internal testing track
         track: internal
-        # Auto-deliver to internal testing track (avoid "임시"/draft mismatch)
-        submit_as_draft: false
+        # Play Console에서 앱이 "draft" 상태면 non-draft 릴리즈 생성이 거부됩니다.
+        # 따라서 internal 업로드는 draft로 두고, 콘솔에서 '배포 시작/게시'로 전환합니다.
+        submit_as_draft: true
 
   android_caregiver_aab_universal_apk_test:
     name: caregiver-aab-universal-apk-test
@@ -367,7 +372,8 @@ workflows:
             const bn=Number(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||0);
             if (!(Number.isFinite(base) && base>0)) throw new Error('invalid VC_BASE='+base);
             if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid BUILD_NUMBER='+String(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||''));
-            const vc=base + bn;
+            const now=Math.floor(Date.now()/1000);
+            const vc=Math.max(base + bn, now);
             j.expo=j.expo||{};
             j.expo.android=j.expo.android||{};
             j.expo.android.versionCode=vc;
@@ -516,7 +522,8 @@ workflows:
             const bn=Number(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||0);
             if (!(Number.isFinite(base) && base>0)) throw new Error('invalid VC_BASE='+base);
             if (!(Number.isFinite(bn) && bn>0)) throw new Error('missing/invalid BUILD_NUMBER='+String(process.env.CM_BUILD_NUMBER||process.env.BUILD_NUMBER||''));
-            const vc=base + bn;
+            const now=Math.floor(Date.now()/1000);
+            const vc=Math.max(base + bn, now);
             j.expo=j.expo||{};
             j.expo.android=j.expo.android||{};
             j.expo.extra=j.expo.extra||{};
