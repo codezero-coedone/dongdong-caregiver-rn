@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Image, Keyboard, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Index() {
@@ -13,7 +13,7 @@ export default function Index() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -24,13 +24,7 @@ export default function Index() {
       </View>
 
       {/* 본문 */}
-      {/* UX: tap anywhere to proceed — avoid absolute overlay layers */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="계속"
-        onPress={() => router.push('/permission?next=/onboarding/step3')}
-        style={styles.content}
-      >
+      <View style={styles.content}>
         {/* 타이틀 */}
         <Text style={styles.title}>실시간 확인으로 안심</Text>
 
@@ -51,9 +45,20 @@ export default function Index() {
         </View>
 
         <View style={{ flex: 1 }} />
+      </View>
 
-        {/* CTA 제거: 화면 탭으로 자연스럽게 진행 */}
-      </Pressable>
+      {/* 하단 CTA (스샷 기준: 다음) */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="다음"
+          style={styles.button}
+          activeOpacity={0.9}
+          onPress={() => router.push('/permission?next=/onboarding/step3')}
+        >
+          <Text style={styles.buttonText}>다음</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -115,6 +120,26 @@ const styles = StyleSheet.create({
   image: {
     width: 130,
     height: 120,
+  },
+
+  /* ===== Footer CTA ===== */
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 24,
+    backgroundColor: '#FFFFFF',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    borderRadius: 16,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
   },
 
 });

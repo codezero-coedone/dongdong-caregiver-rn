@@ -174,7 +174,18 @@ export default function SignupInfoScreen() {
 
   // Watch phone from both forms
   const domesticPhone = domesticForm.watch('phone');
+  const domesticName = domesticForm.watch('name');
+  const domesticRrnFront = domesticForm.watch('rrnFront');
+  const domesticRrnBack = domesticForm.watch('rrnBack');
+
   const foreignerPhone = foreignerForm.watch('phone');
+  const foreignKoreanName = foreignerForm.watch('koreanName');
+  const foreignEnglishName = foreignerForm.watch('englishName');
+  const foreignRegFront = foreignerForm.watch('foreignRegFront');
+  const foreignRegBack = foreignerForm.watch('foreignRegBack');
+  const foreignVisaType = foreignerForm.watch('visaType');
+  const foreignVisaExpiryDate = foreignerForm.watch('visaExpiryDate');
+
   const phone = isDomestic ? domesticPhone : foreignerPhone;
 
   const [verificationCode, setVerificationCode] = useState('');
@@ -230,11 +241,49 @@ export default function SignupInfoScreen() {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const isNonEmpty = (v: unknown): boolean => String(v ?? '').trim().length > 0;
+  const isDigitsLen = (v: unknown, len: number): boolean =>
+    String(v ?? '').replace(/[^\d]/g, '').length === len;
+
+  const canRequestVerification = (() => {
+    if (isVerified) return false;
+    const digits = String(phone || '').replace(/[^\d]/g, '');
+    if (digits.length < 10) return false;
+
+    if (DEVTOOLS_ENABLED) return true;
+
+    if (isDomestic) {
+      return (
+        isNonEmpty(domesticName) &&
+        isDigitsLen(domesticRrnFront, 6) &&
+        isDigitsLen(domesticRrnBack, 7)
+      );
+    }
+
+    const visaType = String(foreignVisaType || '').trim();
+    if (!isNonEmpty(foreignKoreanName)) return false;
+    if (!isNonEmpty(foreignEnglishName)) return false;
+    if (!isDigitsLen(foreignRegFront, 6)) return false;
+    if (!isDigitsLen(foreignRegBack, 7)) return false;
+    if (!visaType) return false;
+    if (DISALLOWED_VISA_TYPES.includes(visaType)) return false;
+    if (!isNonEmpty(foreignVisaExpiryDate)) return false;
+    return true;
+  })();
+
   const handleRequestVerification = async () => {
-    // Trigger phone validation first
+    // 스펙(3b/3c): 휴대폰 인증 전에 필수 입력값이 먼저 채워져야 한다.
     const trigger = isDomestic ? domesticForm.trigger : foreignerForm.trigger;
-    const isPhoneValid = await trigger('phone');
-    if (!isPhoneValid) return;
+    const ok = DEVTOOLS_ENABLED
+      ? await trigger(['phone'] as any)
+      : await trigger(); // trigger all fields (schema-refine 포함)
+    if (!ok) {
+      const errs = isDomestic
+        ? domesticForm.formState.errors
+        : foreignerForm.formState.errors;
+      alertFirstFormError(errs);
+      return;
+    }
 
     // Check if phone is already registered (mock: 01024669262)
     if (phone === '01024669262') {
@@ -299,8 +348,14 @@ export default function SignupInfoScreen() {
       if (result.success) {
         setIsVerified(true);
         setTimer(0);
-        // UX: 상태를 먼저 보여주고(인증 완료), 사용자의 '확인' 탭으로 다음 단계 진입.
-        // (한국 UX에서 "다음" 같은 범용 단어는 이탈 포인트가 되기 쉬움)
+        // 스펙(3b/3c): "인증 완료" → 다음 단계(약관)로 진행
+        const ok = await proceedToTermsIfValid();
+        if (!ok) {
+          const errs = isDomestic
+            ? domesticForm.formState.errors
+            : foreignerForm.formState.errors;
+          alertFirstFormError(errs);
+        }
       } else {
         Alert.alert('오류', result.message);
       }
@@ -379,39 +434,6 @@ export default function SignupInfoScreen() {
         'DEV fast-lane(최소 가입)에 실패했습니다.';
       Alert.alert('오류', String(msg));
     }
-  };
-
-  const onDomesticSubmit = (data: DomesticFormData) => {
-    if (!isVerified) {
-      Alert.alert('알림', '휴대폰 인증을 완료해주세요.');
-      return;
-    }
-    setSignupInfo({
-      name: data.name,
-      rrnFront: data.rrnFront,
-      rrnBack: data.rrnBack,
-      phone: data.phone,
-      isDomestic: true,
-    });
-    router.replace('/signup/terms');
-  };
-
-  const onForeignerSubmit = (data: ForeignerFormData) => {
-    if (!isVerified) {
-      Alert.alert('알림', '휴대폰 인증을 완료해주세요.');
-      return;
-    }
-    setSignupInfo({
-      koreanName: data.koreanName,
-      englishName: data.englishName,
-      foreignRegFront: data.foreignRegFront,
-      foreignRegBack: data.foreignRegBack,
-      visaType: data.visaType,
-      visaExpiryDate: data.visaExpiryDate,
-      phone: data.phone,
-      isDomestic: false,
-    });
-    router.replace('/signup/terms');
   };
 
   const handleDateChange = (date: Date | null) => {
@@ -781,8 +803,7 @@ export default function SignupInfoScreen() {
           <Button
             title="인증번호 받기"
             onPress={handleRequestVerification}
-            // UX: don't look "stuck". Validation is enforced inside handleRequestVerification via trigger('phone').
-            disabled={phone.length < 10}
+            disabled={!canRequestVerification}
           />
         ) : !isVerified ? (
           <Button
@@ -809,15 +830,7 @@ export default function SignupInfoScreen() {
                 확인을 누르면 다음 단계로 이동합니다.
               </Text>
             </View>
-            <Button
-              title="확인"
-              onPress={
-                isDomestic
-                  ? domesticForm.handleSubmit(onDomesticSubmit, alertFirstFormError)
-                  : foreignerForm.handleSubmit(onForeignerSubmit, alertFirstFormError)
-              }
-              disabled={false}
-            />
+            <Button title="확인" onPress={() => void proceedToTermsIfValid()} disabled={false} />
             {DEVTOOLS_ENABLED && (
               <Button
                 title="DEV: 최소 가입 후 바로 간병일지"
