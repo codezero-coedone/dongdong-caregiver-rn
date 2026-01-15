@@ -19,8 +19,39 @@ import { QueryProvider } from '@/services/QueryProvider';
 import { clearTokens, hasValidTokens } from '@/services/tokenService';
 import { useAuthStore } from '@/store/authStore';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import DevOverlay from '@/components/dev/DevOverlay';
+
+// ==========================================================
+// Typography defaults (pixel alignment)
+// - Prevent Android extra font padding from shifting baselines.
+// - Prevent device fontScale differences from making Guardian/Caregiver look mismatched.
+// ==========================================================
+try {
+  (Text as any).defaultProps = (Text as any).defaultProps || {};
+  (Text as any).defaultProps.allowFontScaling = false;
+  (Text as any).defaultProps.style = [
+    Platform.OS === 'android' ? { includeFontPadding: false } : null,
+    (Text as any).defaultProps.style,
+  ].filter(Boolean);
+
+  (TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
+  (TextInput as any).defaultProps.allowFontScaling = false;
+  (TextInput as any).defaultProps.style = [
+    Platform.OS === 'android' ? { includeFontPadding: false } : null,
+    (TextInput as any).defaultProps.style,
+  ].filter(Boolean);
+} catch {
+  // ignore
+}
 
 function parseSemver(v: string): [number, number, number] {
   const parts = String(v || '')
