@@ -15,7 +15,7 @@ import { useAuthStore } from '@/store/authStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, type FieldErrors, useForm } from 'react-hook-form';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
@@ -306,6 +306,19 @@ export default function SignupInfoScreen() {
       }
     } catch (error) {
       Alert.alert('오류', '인증 확인 중 오류가 발생했습니다.');
+    }
+  };
+
+  const alertFirstFormError = (errors: FieldErrors<any>) => {
+    try {
+      const firstKey = Object.keys(errors || {})[0];
+      const first = firstKey ? (errors as any)[firstKey] : null;
+      const msg =
+        String(first?.message || '').trim() ||
+        '필수 입력값을 확인해 주세요.';
+      Alert.alert('입력 확인', msg);
+    } catch {
+      Alert.alert('입력 확인', '필수 입력값을 확인해 주세요.');
     }
   };
 
@@ -800,8 +813,8 @@ export default function SignupInfoScreen() {
               title="확인"
               onPress={
                 isDomestic
-                  ? domesticForm.handleSubmit(onDomesticSubmit)
-                  : foreignerForm.handleSubmit(onForeignerSubmit)
+                  ? domesticForm.handleSubmit(onDomesticSubmit, alertFirstFormError)
+                  : foreignerForm.handleSubmit(onForeignerSubmit, alertFirstFormError)
               }
               disabled={false}
             />
