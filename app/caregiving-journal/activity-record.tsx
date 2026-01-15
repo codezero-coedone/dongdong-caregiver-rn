@@ -97,6 +97,7 @@ export default function ActivityRecordScreen() {
   const [exercise, setExercise] = useState<Status>('caution');
   const [sleep, setSleep] = useState<Status>('caution');
   const [otherNotes, setOtherNotes] = useState('');
+  const [otherNotesHeight, setOtherNotesHeight] = useState<number>(120);
 
   useEffect(() => {
     let alive = true;
@@ -230,12 +231,13 @@ export default function ActivityRecordScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          nestedScrollEnabled
         >
           <Text style={styles.sectionTitle}>활동 기록</Text>
 
@@ -254,11 +256,20 @@ export default function ActivityRecordScreen() {
             <TextInput
               value={otherNotes}
               onChangeText={setOtherNotes}
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { height: otherNotesHeight }]}
               placeholder="전달사항 혹은 기타 특이 사항을 작성해주세요."
               placeholderTextColor="#9CA3AF"
               multiline
               maxLength={500}
+              scrollEnabled={false}
+              textAlignVertical="top"
+              onContentSizeChange={(e: any) => {
+                const h = e?.nativeEvent?.contentSize?.height;
+                if (typeof h === 'number' && isFinite(h)) {
+                  const clamped = Math.max(120, Math.min(260, h));
+                  setOtherNotesHeight(clamped);
+                }
+              }}
             />
             <Text style={styles.counter}>{otherNotes.length}/500</Text>
           </View>

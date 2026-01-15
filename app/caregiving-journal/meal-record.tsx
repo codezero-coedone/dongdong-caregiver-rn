@@ -128,6 +128,7 @@ export default function MealRecordScreen() {
   const [mobility, setMobility] = useState<string>('');
 
   const [careNotes, setCareNotes] = useState('');
+  const [careNotesHeight, setCareNotesHeight] = useState<number>(120);
 
   useEffect(() => {
     let alive = true;
@@ -351,7 +352,7 @@ export default function MealRecordScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView
@@ -359,6 +360,7 @@ export default function MealRecordScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          nestedScrollEnabled
         >
           <Text style={styles.pageTitle}>{mealTitle}</Text>
 
@@ -505,11 +507,20 @@ export default function MealRecordScreen() {
             <TextInput
               value={careNotes}
               onChangeText={setCareNotes}
-              style={styles.textArea}
+              style={[styles.textArea, { height: careNotesHeight }]}
               placeholder="기타 특이 사항을 입력하세요."
               placeholderTextColor="#9CA3AF"
               multiline
               maxLength={500}
+              textAlignVertical="top"
+              scrollEnabled={false}
+              onContentSizeChange={(e: any) => {
+                const h = e?.nativeEvent?.contentSize?.height;
+                if (typeof h === 'number' && isFinite(h)) {
+                  const clamped = Math.max(120, Math.min(260, h));
+                  setCareNotesHeight(clamped);
+                }
+              }}
             />
             <View style={styles.textAreaFooter}>
               <Text style={styles.counterText}>{careNotes.length}/500</Text>

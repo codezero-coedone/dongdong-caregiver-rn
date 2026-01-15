@@ -63,6 +63,7 @@ export default function JournalCreateScreen() {
   const matchIdOk = matchId != null;
   const devtools = isDevtoolsEnabled();
   const [notes, setNotes] = useState('');
+  const [notesHeight, setNotesHeight] = useState<number>(120);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -219,13 +220,19 @@ export default function JournalCreateScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color="#2563EB" />
           </View>
         ) : (
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+          >
           <View style={styles.hintBox}>
             <Ionicons name="information-circle-outline" size={18} color="#2563EB" />
             <Text style={styles.hintText}>
@@ -267,10 +274,18 @@ export default function JournalCreateScreen() {
               onChangeText={setNotes}
               placeholder="환자 상태/주의사항/메모"
               placeholderTextColor="#9CA3AF"
-              style={[styles.input, styles.textarea]}
+              style={[styles.input, styles.textarea, { height: notesHeight }]}
               multiline
               textAlignVertical="top"
               maxLength={500}
+              scrollEnabled={false}
+              onContentSizeChange={(e: any) => {
+                const h = e?.nativeEvent?.contentSize?.height;
+                if (typeof h === 'number' && isFinite(h)) {
+                  const clamped = Math.max(120, Math.min(260, h));
+                  setNotesHeight(clamped);
+                }
+              }}
             />
             <Text style={styles.counter}>{notes.length}/500</Text>
           </View>

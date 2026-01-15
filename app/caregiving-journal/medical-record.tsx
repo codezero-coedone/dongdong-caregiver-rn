@@ -61,6 +61,7 @@ export default function MedicalRecordScreen() {
 
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [otherNotes, setOtherNotes] = useState('');
+  const [otherNotesHeight, setOtherNotesHeight] = useState<number>(110);
 
   useEffect(() => {
     let alive = true;
@@ -202,12 +203,13 @@ export default function MedicalRecordScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          nestedScrollEnabled
         >
           <Text style={styles.sectionTitle}>오늘의 의료기록</Text>
 
@@ -228,11 +230,20 @@ export default function MedicalRecordScreen() {
             <TextInput
               value={otherNotes}
               onChangeText={setOtherNotes}
-              style={styles.textArea}
+              style={[styles.textArea, { height: otherNotesHeight }]}
               placeholder="전달사항 혹은 기타 특이 사항을 작성해주세요."
               placeholderTextColor="#9CA3AF"
               multiline
               maxLength={500}
+              scrollEnabled={false}
+              textAlignVertical="top"
+              onContentSizeChange={(e: any) => {
+                const h = e?.nativeEvent?.contentSize?.height;
+                if (typeof h === 'number' && isFinite(h)) {
+                  const clamped = Math.max(110, Math.min(260, h));
+                  setOtherNotesHeight(clamped);
+                }
+              }}
             />
             <View style={styles.textAreaFooter}>
               <Text style={styles.counterText}>{otherNotes.length}/500</Text>
