@@ -297,7 +297,20 @@ export default function SignupInfoScreen() {
       if (m && m[1]) setVerificationCode(m[1]);
       Alert.alert('알림', result.message || '인증번호를 발송했습니다.');
     } catch (error) {
-      Alert.alert('오류', '인증번호 발송에 실패했습니다.');
+      const e: any = error;
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        '인증번호 발송에 실패했습니다.';
+      if (DEVTOOLS_ENABLED) {
+        devlog({
+          scope: 'API',
+          level: 'error',
+          message: 'sms verification request failed',
+          meta: { status: e?.response?.status, message: msg },
+        });
+      }
+      Alert.alert('오류', String(msg));
     }
   };
 
@@ -353,7 +366,20 @@ export default function SignupInfoScreen() {
         Alert.alert('오류', result.message);
       }
     } catch (error) {
-      Alert.alert('오류', '인증 확인 중 오류가 발생했습니다.');
+      const e: any = error;
+      const msg =
+        e?.response?.data?.message ||
+        e?.message ||
+        '인증 확인 중 오류가 발생했습니다.';
+      if (DEVTOOLS_ENABLED) {
+        devlog({
+          scope: 'API',
+          level: 'error',
+          message: 'sms verification verify failed',
+          meta: { status: e?.response?.status, message: msg },
+        });
+      }
+      Alert.alert('오류', String(msg));
     }
   };
 
