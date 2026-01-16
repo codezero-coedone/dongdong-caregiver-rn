@@ -35,19 +35,18 @@ const ExistingMemberModal = ({ visible, onClose }: ExistingMemberModalProps) => 
                     onPress={(e) => e.stopPropagation()}
                 >
                     <Text style={styles.modalTitle}>이미 가입된 회원</Text>
-
-                    <View style={styles.contentContainer}>
-                        {/* Empty content area like the reference image */}
-                    </View>
+                    <Text style={styles.modalDesc}>
+                        해당 휴대폰 번호로{'\n'}가입된 계정이 존재합니다.
+                    </Text>
 
                     <TouchableOpacity
                         style={styles.button}
                         onPress={handleGoToLogin}
                         activeOpacity={0.8}
                         accessibilityRole="button"
-                        accessibilityLabel="로그인 하러가기"
+                        accessibilityLabel="다른 수단으로 로그인"
                     >
-                        <Text style={styles.textStyle}>로그인 하러가기</Text>
+                        <Text style={styles.textStyle}>다른 수단으로 로그인</Text>
                     </TouchableOpacity>
                 </TouchableOpacity>
             </TouchableOpacity>
@@ -80,28 +79,29 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 15,
-        color: '#000',
+        fontWeight: '800',
+        marginBottom: 10,
+        color: '#111827',
     },
-    contentContainer: {
-        width: '100%',
-        backgroundColor: '#F5F6F8',
-        paddingVertical: 50,
-        marginBottom: 20,
-        alignItems: 'center',
+    modalDesc: {
+        textAlign: 'center',
+        fontSize: 15,
+        fontWeight: '600',
+        lineHeight: 22,
+        color: '#111827',
+        marginBottom: 16,
     },
     button: {
-        backgroundColor: '#007AFF',
-        borderRadius: 10,
-        paddingVertical: 14,
-        paddingHorizontal: 30,
+        backgroundColor: '#0066FF',
+        borderRadius: 14,
+        height: 56,
         width: '85%',
-        elevation: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     textStyle: {
         color: 'white',
-        fontWeight: 'bold',
+        fontWeight: '800',
         textAlign: 'center',
         fontSize: 16,
     },

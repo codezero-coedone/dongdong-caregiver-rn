@@ -106,6 +106,7 @@ export default function PermissionScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.frame}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerSide} />
@@ -173,6 +174,7 @@ export default function PermissionScreen() {
           <Text style={styles.buttonText}>확인</Text>
         </TouchableOpacity>
       </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -180,6 +182,13 @@ export default function PermissionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#fff',
   },
   header: {
@@ -265,8 +274,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
+    backgroundColor: '#0066FF',
+    borderRadius: 16,
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',

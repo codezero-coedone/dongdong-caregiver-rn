@@ -213,6 +213,7 @@ export default function CareerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.frame}>
       <ScrollView style={styles.scrollView}>
         {/* 주의사항 배너 */}
         <View style={styles.warningBanner}>
@@ -368,6 +369,7 @@ export default function CareerScreen() {
       <View style={styles.buttonContainer}>
         <Button title="가입 완료" onPress={handleSubmit} isLoading={isSubmitting} />
       </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -375,6 +377,13 @@ export default function CareerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#fff',
   },
   scrollView: {

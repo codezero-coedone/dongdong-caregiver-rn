@@ -13,6 +13,8 @@ interface InputProps extends TextInputProps {
   isValid?: boolean;
   containerClassName?: string;
   rightAddon?: React.ReactNode;
+  // NOTE: 일부 타입 환경에서 TextInputProps.editable 추론이 깨질 수 있어 명시한다.
+  editable?: boolean;
 }
 
 const ErrorIcon = () => (
@@ -34,30 +36,34 @@ const Input = ({
   error,
   isValid,
   containerClassName = '',
-  className = '',
-  ...props
+  rightAddon,
+  editable = true,
+  ...rest
 }: InputProps) => {
   const showSuccessIcon = isValid && !error;
   const showErrorIcon = !!error;
 
   const borderColor = showErrorIcon
     ? '#FF4242'
-    : props.editable === false
+    : editable === false
     ? 'rgba(112,115,124,0.08)'
     : 'rgba(112,115,124,0.16)';
 
+  const backgroundColor = showErrorIcon ? '#FEF2F2' : '#FFFFFF';
+
   return (
-    <View>
+    <View className={containerClassName}>
       {label && <Text style={styles.label}>{label}</Text>}
       <View>
         <TextInput
-          style={[styles.input, { borderColor }]}
+          style={[styles.input, { borderColor, backgroundColor }]}
           placeholderTextColor="#9CA3AF"
-          {...props}
+          editable={editable}
+          {...rest}
         />
-        {(showErrorIcon || showSuccessIcon) && (
+        {(rightAddon || showErrorIcon || showSuccessIcon) && (
           <View style={styles.iconAbsolute}>
-            {showErrorIcon ? <ErrorIcon /> : <SuccessIcon />}
+            {rightAddon ? rightAddon : showErrorIcon ? <ErrorIcon /> : <SuccessIcon />}
           </View>
         )}
       </View>
@@ -77,12 +83,11 @@ const styles = StyleSheet.create({
     color: 'rgba(46,47,51,0.88)',
   },
   input: {
-    height: 48,
-    paddingHorizontal: 12,
+    height: 56,
+    paddingHorizontal: 16,
     paddingRight: 48,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    backgroundColor: '#FFFFFF',
     textAlignVertical: 'center',
     fontSize: 16,
     color: '#171719',

@@ -23,6 +23,9 @@ export default function ToggleButtonGroup<T extends string = string>({
   const typographyVariant =
     variant === 'headline' ? 'headline2.medium' : 'label1.medium';
 
+  const selectedColor = '#0066FF';
+  const unselectedColor = 'rgba(55,56,60,0.55)';
+
   return (
     <View style={styles.container}>
       {options.map((option, index) => {
@@ -47,7 +50,7 @@ export default function ToggleButtonGroup<T extends string = string>({
 
             <Typography
               variant={typographyVariant}
-              color={isSelected ? 'primary' : 'gray'}
+              color={isSelected ? selectedColor : unselectedColor}
             >
               {option.label}
             </Typography>
@@ -62,9 +65,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: 48,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(112,115,124,0.22)',
+    borderColor: '#E5E7EB',
     overflow: 'hidden',
     marginBottom: 30,
   },
@@ -77,26 +80,26 @@ const styles = StyleSheet.create({
 
   left: {
     borderRightWidth: 1,
-    borderRightColor: 'rgba(112,115,124,0.22)',
+    borderRightColor: '#E5E7EB',
   },
 
   right: {},
 
   activeBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,102,255,0.05)',
+    backgroundColor: '#F3F8FF',
     borderWidth: 1,
-    borderColor: 'rgba(0,102,255,0.43)',
+    borderColor: '#0066FF',
     zIndex: -1,
   },
 
   activeLeft: {
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
 
   activeRight: {
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
   },
 });

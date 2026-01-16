@@ -140,6 +140,7 @@ export default function CaregiverInfoScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
+      <View style={{ flex: 1, width: '100%', maxWidth: 375, alignSelf: 'center' }}>
       <ScrollView className="flex-1 px-6 pt-6">
         {/* Warning Banner */}
         <WarningBanner message="허위 정보 기재 시 계정 제재 가능성 고지 알림" />
@@ -224,7 +225,15 @@ export default function CaregiverInfoScreen() {
                   control={control}
                   name="rrnBack"
                   render={({ field: { onChange, value } }) => (
-                    <MaskedRRNInput value={value} onChangeText={onChange} />
+                    <MaskedRRNInput
+                      value={value}
+                      onChangeText={onChange}
+                      error={errors.rrnBack?.message}
+                      isValid={
+                        String(value || '').replace(/[^\d]/g, '').length === 7 &&
+                        !errors.rrnBack
+                      }
+                    />
                   )}
                 />
               </View>
@@ -346,6 +355,7 @@ export default function CaregiverInfoScreen() {
       {/* Submit Button */}
       <View className="p-6">
         <Button title="입력 완료" onPress={handleSubmit(onSubmit)} />
+      </View>
       </View>
     </SafeAreaView>
   );

@@ -106,14 +106,15 @@ export default Button;
 const styles = StyleSheet.create({
   base: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 12,
+    height: 56,
+    paddingVertical: 0,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   primary: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0066FF',
   },
   kakao: {
     backgroundColor: '#FEE500',
@@ -126,15 +127,15 @@ const styles = StyleSheet.create({
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#2563EB',
+    borderColor: '#0066FF',
   },
   disabled: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: 'rgba(55,56,60,0.08)',
   },
   iconWrap: { marginRight: 8 },
-  textBase: { fontSize: 18, fontWeight: '700' },
+  textBase: { fontSize: 18, fontWeight: '800' },
   textLight: { color: '#FFFFFF' },
   textDark: { color: '#111827' },
-  textPrimary: { color: '#2563EB' },
+  textPrimary: { color: '#0066FF' },
   textDisabled: { color: 'rgba(55,56,60,0.55)' },
 });

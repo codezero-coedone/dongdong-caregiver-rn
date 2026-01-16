@@ -456,6 +456,7 @@ export default function SignupInfoScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
+      <View style={{ flex: 1, width: '100%', maxWidth: 375, alignSelf: 'center' }}>
       <ScrollView className="flex-1 px-6 pt-6">
         {/* Toggle */}
         <ToggleButtonGroup
@@ -864,6 +865,7 @@ export default function SignupInfoScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
       />
+      </View>
     </SafeAreaView>
   );
 }

@@ -40,6 +40,8 @@ const MaskedRRNInput = ({
       ? 'rgba(112,115,124,0.08)'
       : 'rgba(112,115,124,0.16)';
 
+  const backgroundColor = showErrorIcon ? '#FEF2F2' : 'transparent';
+
   const renderDigits = () => {
     const raw = String(value || '').replace(/[^\d]/g, '').slice(0, maxLength);
     const filled = raw.length;
@@ -80,7 +82,7 @@ const MaskedRRNInput = ({
       <TouchableOpacity
         onPress={handlePress}
         activeOpacity={0.8}
-        style={[styles.container, { borderColor }]}
+        style={[styles.container, { borderColor, backgroundColor }]}
       >
         {renderDigits()}
         {(showErrorIcon || showSuccessIcon) && (
@@ -121,11 +123,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    height: 56,
+    paddingHorizontal: 16,
     paddingRight: 48,
-    paddingVertical: 12,
-    minHeight: 48,
+    paddingVertical: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,

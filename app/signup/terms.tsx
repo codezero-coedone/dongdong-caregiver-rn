@@ -69,6 +69,7 @@ export default function TermsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.frame}>
       <ScrollView style={styles.scrollView}>
         {/* Title */}
         <Text style={styles.title}>
@@ -133,6 +134,7 @@ export default function TermsScreen() {
           disabled={!isRequiredChecked}
         />
       </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -140,6 +142,13 @@ export default function TermsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'white',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: 'white',
   },
   scrollView: {
