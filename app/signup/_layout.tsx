@@ -10,7 +10,7 @@ export default function SignupLayout() {
         headerStyle: {
           backgroundColor: '#FFFFFF',
         },
-        headerTitleAlign: 'left',
+        headerTitleAlign: 'center',
         headerBackTitle: '',
         headerBackButtonDisplayMode: 'minimal',
         headerTitleStyle: {

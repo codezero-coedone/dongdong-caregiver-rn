@@ -548,7 +548,16 @@ export default function SignupInfoScreen() {
                       control={domesticForm.control}
                       name="rrnBack"
                       render={({ field: { onChange, value } }) => (
-                        <MaskedRRNInput value={value} onChangeText={onChange} />
+                        <MaskedRRNInput
+                          value={value}
+                          onChangeText={onChange}
+                          editable={!isVerified}
+                          error={domesticForm.formState.errors.rrnBack?.message}
+                          isValid={
+                            String(value || '').replace(/[^\d]/g, '').length === 7 &&
+                            !domesticForm.formState.errors.rrnBack
+                          }
+                        />
                       )}
                     />
                   </View>
@@ -673,7 +682,16 @@ export default function SignupInfoScreen() {
                       control={foreignerForm.control}
                       name="foreignRegBack"
                       render={({ field: { onChange, value } }) => (
-                        <MaskedRRNInput value={value} onChangeText={onChange} />
+                        <MaskedRRNInput
+                          value={value}
+                          onChangeText={onChange}
+                          editable={!isVerified}
+                          error={foreignerForm.formState.errors.foreignRegBack?.message}
+                          isValid={
+                            String(value || '').replace(/[^\d]/g, '').length === 7 &&
+                            !foreignerForm.formState.errors.foreignRegBack
+                          }
+                        />
                       )}
                     />
                   </View>
