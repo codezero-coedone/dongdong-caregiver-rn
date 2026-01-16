@@ -248,14 +248,33 @@ export default function MealRecordScreen() {
           [mealKey]: payload,
         });
       } else {
-        const res = await api.post('/journals', {
-          matchId,
-          date,
-          [mealKey]: payload,
-        });
-        const saved = unwrapData<any>((res as any)?.data);
-        const id = saved?.id;
-        if (typeof id === 'number') setJournalId(id);
+        try {
+          const res = await api.post('/journals', {
+            matchId,
+            date,
+            [mealKey]: payload,
+          });
+          const saved = unwrapData<any>((res as any)?.data);
+          const id = saved?.id;
+          if (typeof id === 'number') setJournalId(id);
+        } catch (e: any) {
+          const status = e?.response?.status;
+          // If a journal already exists for (matchId, date), fall back to PUT.
+          if (status === 409) {
+            const listRes = await api.get('/journals', { params: { matchId } });
+            const list = unwrapData<JournalListItem[]>((listRes as any)?.data);
+            const found = Array.isArray(list) ? list.find((r) => r.date === date) : undefined;
+            const existingId = found?.id;
+            if (typeof existingId === 'number') {
+              setJournalId(existingId);
+              await api.put(`/journals/${existingId}`, { matchId, date, [mealKey]: payload });
+            } else {
+              throw e;
+            }
+          } else {
+            throw e;
+          }
+        }
       }
       Alert.alert('저장 완료', `${mealTitle} 기록이 저장되었습니다.`, [
         { text: '확인', onPress: () => router.back() },
