@@ -40,6 +40,7 @@ const Input = ({
   editable = true,
   ...rest
 }: InputProps) => {
+  const { style: inputStyle, ...restProps } = rest as any;
   const showSuccessIcon = isValid && !error;
   const showErrorIcon = !!error;
 
@@ -56,10 +57,10 @@ const Input = ({
       {label && <Text style={styles.label}>{label}</Text>}
       <View>
         <TextInput
-          style={[styles.input, { borderColor, backgroundColor }]}
+          style={[styles.input, { borderColor, backgroundColor }, inputStyle]}
           placeholderTextColor="#9CA3AF"
           editable={editable}
-          {...rest}
+          {...restProps}
         />
         {(rightAddon || showErrorIcon || showSuccessIcon) && (
           <View style={styles.iconAbsolute}>
@@ -83,10 +84,11 @@ const styles = StyleSheet.create({
     color: 'rgba(46,47,51,0.88)',
   },
   input: {
-    height: 56,
-    paddingHorizontal: 16,
-    paddingRight: 48,
-    borderRadius: 16,
+    // SSOT: Textfield = 48px height, 12px radius, 12px padding
+    height: 48,
+    paddingHorizontal: 12,
+    paddingRight: 44,
+    borderRadius: 12,
     borderWidth: 1,
     textAlignVertical: 'center',
     fontSize: 16,

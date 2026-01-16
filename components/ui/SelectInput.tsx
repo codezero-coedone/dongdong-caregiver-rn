@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface SelectOption {
     label: string;
@@ -87,23 +87,19 @@ const SelectInput = ({
     return (
         <View className={`mb-4 ${containerClassName}`}>
             {label && (
-                <Text className="text-sm font-bold mb-2 text-gray-800">
-                    {label} <Text style={{ color: '#EF4444' }}>*</Text>
+                <Text style={styles.label}>
+                    {label} <Text style={styles.req}>*</Text>
                 </Text>
             )}
             <TouchableOpacity
                 onPress={() => setIsModalVisible(true)}
-                style={{
-                    height: 56,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 16,
-                    borderWidth: 1,
-                    borderColor: error ? '#FCA5A5' : '#E5E7EB',
-                    borderRadius: 12,
-                    backgroundColor: error ? '#FEF2F2' : 'white',
-                }}
+                style={[
+                  styles.field,
+                  {
+                    borderColor: error ? '#FF4242' : 'rgba(112,115,124,0.16)',
+                    backgroundColor: error ? '#FEF2F2' : '#FFFFFF',
+                  },
+                ]}
             >
                 <Text
                     style={{
@@ -120,7 +116,7 @@ const SelectInput = ({
                     <ChevronDownIcon color={error ? '#EF4444' : '#0066FF'} />
                 </View>
             </TouchableOpacity>
-            {error && <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 4 }}>{error}</Text>}
+            {error && <Text style={styles.errorText}>{error}</Text>}
 
             <Modal
                 visible={isModalVisible}
@@ -208,3 +204,29 @@ const SelectInput = ({
 };
 
 export default SelectInput;
+
+const styles = StyleSheet.create({
+  label: {
+    marginBottom: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    color: 'rgba(46,47,51,0.88)',
+  },
+  req: { color: '#EF4444' },
+  field: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  errorText: { color: '#EF4444', fontSize: 12, marginTop: 4 },
+});

@@ -16,27 +16,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Controller, type FieldErrors, useForm } from 'react-hook-form';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
 // 비자 종류 옵션
+// SSOT(카카오로그인이후케어기버회원가입): 외국인 가입은 H-2 / F-4만 허용.
 const VISA_TYPES = [
-  { label: 'E-9 (비전문취업)', value: 'E-9' },
   { label: 'H-2 (방문취업)', value: 'H-2' },
   { label: 'F-4 (재외동포)', value: 'F-4' },
-  { label: 'F-5 (영주)', value: 'F-5' },
-  { label: 'F-6 (결혼이민)', value: 'F-6' },
-  { label: 'D-2 (유학)', value: 'D-2' },
-  { label: 'D-6 (종교)', value: 'D-6' },
-  { label: 'E-7 (특정활동)', value: 'E-7' },
-  { label: '기타', value: 'OTHER' },
 ];
 
-// 가입 불가 비자 타입
-const DISALLOWED_VISA_TYPES = ['D-6'];
+const ALLOWED_VISA_TYPES = ['H-2', 'F-4'] as const;
 
 // 내국인용 Zod Schema
 const domesticSchema = z
@@ -121,7 +114,7 @@ const foreignerSchema = z
         path: ['visaType'],
         message: '비자 종류를 선택해주세요.',
       });
-    } else if (DISALLOWED_VISA_TYPES.includes(visaType)) {
+    } else if (!ALLOWED_VISA_TYPES.includes(visaType as any)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['visaType'],
@@ -266,7 +259,7 @@ export default function SignupInfoScreen() {
     if (!isDigitsLen(foreignRegFront, 6)) return false;
     if (!isDigitsLen(foreignRegBack, 7)) return false;
     if (!visaType) return false;
-    if (DISALLOWED_VISA_TYPES.includes(visaType)) return false;
+    if (!ALLOWED_VISA_TYPES.includes(visaType as any)) return false;
     if (!isNonEmpty(foreignVisaExpiryDate)) return false;
     return true;
   })();
@@ -455,9 +448,12 @@ export default function SignupInfoScreen() {
     : foreignerForm.formState.errors;
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
-      <View style={{ flex: 1, width: '100%', maxWidth: 375, alignSelf: 'center' }}>
-      <ScrollView className="flex-1 px-6 pt-6">
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <View style={styles.container}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        {DEVTOOLS_ENABLED ? (
+          <Text style={styles.screenHint}>DBG: 회원가입 필수 정보를 입력해 주세요.</Text>
+        ) : null}
         {/* Toggle */}
         <ToggleButtonGroup
           options={[
@@ -817,7 +813,7 @@ export default function SignupInfoScreen() {
         )}
       </ScrollView>
 
-      <View className="p-6 border-gray-100">
+      <View style={styles.footer}>
         {!isVerificationSent ? (
           <Button
             title="인증번호 받기"
@@ -869,3 +865,25 @@ export default function SignupInfoScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, width: '100%', maxWidth: 375, alignSelf: 'center' },
+  scroll: { flex: 1 },
+  // SSOT: screen horizontal padding = 20
+  scrollContent: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 24 },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(17,24,39,0.06)',
+  },
+  screenHint: {
+    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(55,56,60,0.55)',
+  },
+});
