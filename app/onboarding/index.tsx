@@ -1,36 +1,71 @@
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LanguagePickerModal from '@/components/auth/LanguagePickerModal';
+import { getAppLocale, setAppLocale, type AppLocale } from '@/services/localeService';
 
 export default function Index() {
   const router = useRouter();
+  const [locale, setLocale] = useState<AppLocale>('ko');
+  const [langOpen, setLangOpen] = useState(false);
 
   useEffect(() => {
     // UX polish: ensure no residual IME/keyboard UI leaks into onboarding (e.g. "한글" key at bottom-left).
     Keyboard.dismiss();
+    void (async () => {
+      const v = await getAppLocale();
+      setLocale(v);
+    })();
   }, []);
+
+  const t = (() => {
+    if (locale === 'en') {
+      return {
+        header: 'Login',
+        title: 'Start care with confidence',
+        desc:
+          'Connect with professional caregivers quickly.\n' +
+          'Understand care needs clearly and begin stable care with the right match.',
+        next: 'Next',
+      };
+    }
+    return {
+      header: '로그인',
+      title: '안심되는 돌봄 시작',
+      desc:
+        '전문 간병인과의 연결을 쉽고 빠르게.\n' +
+        '필요한 돌봄을 정확히 이해하고, 가장 적합한 간병인을 추천해 안정적인\n' +
+        '돌봄을 시작할 수 있어요.',
+      next: '다음',
+    };
+  })();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.frame}>
       {/* 헤더 */}
       <View style={styles.header}>
         <View style={styles.headerSide} />
-        <Text style={styles.headerTitle}>로그인</Text>
-        <View style={styles.headerSide} />
+        <Text style={styles.headerTitle}>{t.header}</Text>
+        <TouchableOpacity
+          onPress={() => setLangOpen(true)}
+          style={styles.langBtn}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="언어 선택"
+        >
+          <Text style={styles.langText}>A</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 본문 */}
       <View style={styles.content}>
         {/* 타이틀 */}
-        <Text style={styles.title}>안심되는 돌봄 시작</Text>
+        <Text style={styles.title}>{t.title}</Text>
 
         {/* 설명 */}
-        <Text style={styles.description}>
-          전문 간병인과의 연결을 쉽고 빠르게.{'\n'}
-          필요한 돌봄을 정확히 이해하고, 가장 적합한 간병인을 추천해 안정적인
-          돌봄을 시작할 수 있어요.
-        </Text>
+        <Text style={styles.description}>{t.desc}</Text>
 
         {/* 이미지 */}
         <View style={styles.imageWrapper}>
@@ -48,13 +83,25 @@ export default function Index() {
       <View style={styles.footer}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="다음"
+          accessibilityLabel={t.next}
           style={styles.button}
           activeOpacity={0.9}
           onPress={() => router.push('/onboarding/step2')}
         >
-          <Text style={styles.buttonText}>다음</Text>
+          <Text style={styles.buttonText}>{t.next}</Text>
         </TouchableOpacity>
+      </View>
+
+      <LanguagePickerModal
+        visible={langOpen}
+        value={locale}
+        onClose={() => setLangOpen(false)}
+        onSelect={(v) => {
+          setLocale(v);
+          setLangOpen(false);
+          void setAppLocale(v);
+        }}
+      />
       </View>
     </SafeAreaView>
   );
@@ -64,6 +111,14 @@ const styles = StyleSheet.create({
   /* ===== Layout ===== */
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  // Figma base frame: 375px wide. Center on larger screens for deterministic layout.
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#FFFFFF',
   },
 
@@ -86,6 +141,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
+  langBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langText: { fontSize: 14, fontWeight: '900', color: '#111827' },
 
   /* ===== Content ===== */
   content: {

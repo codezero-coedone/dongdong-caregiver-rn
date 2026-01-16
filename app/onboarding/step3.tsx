@@ -14,6 +14,7 @@ import {
   Alert,
   Image,
   Keyboard,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -23,6 +24,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import type { AxiosError } from 'axios';
 import { devlog, isDevtoolsEnabled } from '@/services/devlog';
+import LoginFailModal from '@/components/auth/LoginFailModal';
+import LanguagePickerModal from '@/components/auth/LanguagePickerModal';
+import { getAppLocale, setAppLocale, type AppLocale } from '@/services/localeService';
 
 /**
  * ============================================
@@ -39,10 +43,17 @@ export default function Step3() {
   const completeSignup = useAuthStore((s) => s.completeSignup);
 
   const devtoolsEnabled = isDevtoolsEnabled();
+  const [locale, setLocale] = React.useState<AppLocale>('ko');
+  const [langOpen, setLangOpen] = React.useState(false);
+  const [failOpen, setFailOpen] = React.useState(false);
 
   React.useEffect(() => {
     // UX polish: prevent IME/keyboard UI from leaking into onboarding/login screen.
     Keyboard.dismiss();
+    void (async () => {
+      const v = await getAppLocale();
+      setLocale(v);
+    })();
   }, []);
 
   const formatApiError = (e: unknown, label: string): string => {
@@ -213,50 +224,71 @@ export default function Step3() {
           code: (e as any)?.code,
         },
       });
-      // Deterministic preflight: tells us whether "Network Error" is global connectivity vs per-endpoint.
-      try {
-        const health = await pingHealth();
-        if (!health.ok) {
+      // Figma UX: use modal instead of OS alert.
+      // (We still keep detailed logs in DBG.)
+      void (async () => {
+        try {
+          const health = await pingHealth();
           devlog({
             scope: 'KAKAO',
-            level: 'error',
-            message: 'preflight health: FAIL',
-            meta: { ...health, base: getApiBaseUrl() },
+            level: health.ok ? 'warn' : 'error',
+            message: health.ok ? 'login failed (health ok)' : 'login failed (health fail)',
+            meta: { ...(health as any), base: getApiBaseUrl() },
           });
-          Alert.alert(
-            '로그인 실패',
-            formatKakaoError(e),
-          );
-        } else {
-          Alert.alert('카카오 로그인 실패', formatKakaoError(e));
+        } catch {
+          // ignore
         }
-      } catch {
-        Alert.alert('카카오 로그인 실패', formatKakaoError(e));
-      }
+      })();
+      setFailOpen(true);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const t = (() => {
+    if (locale === 'en') {
+      return {
+        header: 'Login',
+        title: 'Use personalized care service',
+        desc: 'Match, manage and journal care in one place.',
+        kakao: 'Start with Kakao',
+        apple: 'Start with Apple',
+      };
+    }
+    return {
+      header: '로그인',
+      title: '맞춤 돌봄 서비스 이용',
+      desc: '간병 매칭부터 관리까지 한 곳에서 해결\n보호자·환자 모두에게 편리한 통합 돌봄 서비스 제공',
+      kakao: '카카오 시작하기',
+      apple: '애플 시작하기',
+    };
+  })();
+
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.frame}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>로그인</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>{t.header}</Text>
+        <TouchableOpacity
+          onPress={() => setLangOpen(true)}
+          style={styles.langBtn}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="언어 선택"
+        >
+          <Text style={styles.langText}>A</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 본문 */}
       <View style={styles.content}>
-        <Text style={styles.title}>맞춤 돌봄 서비스 이용</Text>
+        <Text style={styles.title}>{t.title}</Text>
 
-        <Text style={styles.description}>
-          간병 매칭부터 관리까지 한 곳에서 해결{'\n'}
-          보호자·환자 모두에게 편리한 통합 돌봄 서비스 제공
-        </Text>
+        <Text style={styles.description}>{t.desc}</Text>
 
         <View style={styles.imageWrapper}>
           <Image
@@ -270,7 +302,7 @@ export default function Step3() {
 
         <View style={{ width: '100%', gap: 12, paddingBottom: 24 }}>
           <Button
-            title="카카오 시작하기"
+            title={t.kakao}
             variant="kakao"
             isLoading={isLoading}
             icon={
@@ -281,7 +313,33 @@ export default function Step3() {
             }
             onPress={handleKakaoLogin}
           />
+
+          {Platform.OS === 'ios' ? (
+            <Button
+              title={t.apple}
+              variant="apple"
+              disabled={true}
+              icon={
+                <Ionicons name="logo-apple" size={22} color="#111827" />
+              }
+              onPress={() => {}}
+            />
+          ) : null}
         </View>
+      </View>
+
+      <LanguagePickerModal
+        visible={langOpen}
+        value={locale}
+        onClose={() => setLangOpen(false)}
+        onSelect={(v) => {
+          setLocale(v);
+          setLangOpen(false);
+          void setAppLocale(v);
+        }}
+      />
+
+      <LoginFailModal visible={failOpen} onClose={() => setFailOpen(false)} />
       </View>
     </SafeAreaView>
   );
@@ -292,6 +350,13 @@ export default function Step3() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#fff',
   },
   header: {
@@ -308,6 +373,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
   },
+  langBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langText: { fontSize: 14, fontWeight: '900', color: '#111827' },
   content: {
     flex: 1,
     alignItems: 'center',

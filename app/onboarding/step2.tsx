@@ -1,39 +1,74 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LanguagePickerModal from '@/components/auth/LanguagePickerModal';
+import { getAppLocale, setAppLocale, type AppLocale } from '@/services/localeService';
 
 export default function Index() {
   const router = useRouter();
+  const [locale, setLocale] = useState<AppLocale>('ko');
+  const [langOpen, setLangOpen] = useState(false);
 
   useEffect(() => {
     // UX polish: prevent IME/keyboard UI from leaking into onboarding screens.
     Keyboard.dismiss();
+    void (async () => {
+      const v = await getAppLocale();
+      setLocale(v);
+    })();
   }, []);
+
+  const t = (() => {
+    if (locale === 'en') {
+      return {
+        header: 'Login',
+        title: '安心 with real-time updates',
+        desc:
+          'Check the current care status anytime.\n' +
+          'Progress, daily journals and important notifications are shared in real time.',
+        next: 'Next',
+      };
+    }
+    return {
+      header: '로그인',
+      title: '실시간 확인으로 안심',
+      desc:
+        '현재 돌봄 상황을 언제든 확인하세요.\n' +
+        '간병 진행 현황, 간병일지, 주요 알림까지 실시간으로 공유되어 멀리\n' +
+        '있어도 안심할 수 있어요.',
+      next: '다음',
+    };
+  })();
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.frame}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>로그인</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>{t.header}</Text>
+        <TouchableOpacity
+          onPress={() => setLangOpen(true)}
+          style={styles.langBtn}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="언어 선택"
+        >
+          <Text style={styles.langText}>A</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 본문 */}
       <View style={styles.content}>
         {/* 타이틀 */}
-        <Text style={styles.title}>실시간 확인으로 안심</Text>
+        <Text style={styles.title}>{t.title}</Text>
 
         {/* 설명 */}
-        <Text style={styles.description}>
-          현재 돌봄 상황을 언제든 확인하세요.{'\n'}
-          간병 진행 현황, 간병일지, 주요 알림까지 실시간으로 공유되어 멀리
-          있어도 안심할 수 있어요.
-        </Text>
+        <Text style={styles.description}>{t.desc}</Text>
 
         {/* 이미지 */}
         <View style={styles.imageWrapper}>
@@ -51,13 +86,25 @@ export default function Index() {
       <View style={styles.footer}>
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="다음"
+          accessibilityLabel={t.next}
           style={styles.button}
           activeOpacity={0.9}
           onPress={() => router.push('/permission?next=/onboarding/step3')}
         >
-          <Text style={styles.buttonText}>다음</Text>
+          <Text style={styles.buttonText}>{t.next}</Text>
         </TouchableOpacity>
+      </View>
+
+      <LanguagePickerModal
+        visible={langOpen}
+        value={locale}
+        onClose={() => setLangOpen(false)}
+        onSelect={(v) => {
+          setLocale(v);
+          setLangOpen(false);
+          void setAppLocale(v);
+        }}
+      />
       </View>
     </SafeAreaView>
   );
@@ -67,6 +114,13 @@ const styles = StyleSheet.create({
   /* ===== Layout ===== */
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#FFFFFF',
   },
 
@@ -86,6 +140,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
+  langBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langText: { fontSize: 14, fontWeight: '900', color: '#111827' },
 
   /* ===== Content ===== */
   content: {
