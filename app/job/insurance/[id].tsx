@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { setInsuranceAutoEnrolled } from '@/services/insuranceService';
 
 // Mock 보험 데이터
 const MOCK_INSURANCE_DATA = {
@@ -101,11 +102,15 @@ export default function InsuranceScreen() {
     if (!allRequiredAgreed) return;
     // TODO: 보험 가입 처리
     console.log('Insurance enrollment submitted');
-    router.back();
+    void (async () => {
+      await setInsuranceAutoEnrolled(true);
+      router.back();
+    })();
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.frame}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -290,7 +295,7 @@ export default function InsuranceScreen() {
                   </Text>
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={20} color="#3B82F6" />
+              <Ionicons name="chevron-down" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           ))}
         </View>
@@ -318,6 +323,7 @@ export default function InsuranceScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -325,6 +331,13 @@ export default function InsuranceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#fff',
   },
   header: {

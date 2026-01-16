@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiClient } from '@/services/apiClient';
+import { getInsuranceAutoEnrolled } from '@/services/insuranceService';
 
 type ApiJobDetail = {
   id: string;
@@ -35,6 +36,7 @@ export default function JobApplyScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<ApiJobDetail | null>(null);
+  const [insuranceDone, setInsuranceDone] = useState(false);
 
   const formatYmd = (iso: string | null | undefined): string => {
     if (!iso) return '-';
@@ -64,6 +66,18 @@ export default function JobApplyScreen() {
     };
   }, [id]);
 
+  React.useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const done = await getInsuranceAutoEnrolled();
+      if (!alive) return;
+      setInsuranceDone(done);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // 약관 동의 상태
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [contractAgreed, setContractAgreed] = useState(false);
@@ -87,22 +101,24 @@ export default function JobApplyScreen() {
   };
 
   const handleInsuranceLink = () => {
+    if (insuranceDone) return;
     router.push(`/job/insurance/${id}`);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>간병 지원하기</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+      <View style={styles.frame}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons name="chevron-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>간병 지원하기</Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 지원 매칭 정보 */}
@@ -180,13 +196,18 @@ export default function JobApplyScreen() {
           <Text style={styles.sectionTitle}>간병인배상책임보험 자동가입</Text>
 
           <TouchableOpacity
-            style={styles.insuranceLink}
+            style={[styles.insuranceLink, insuranceDone && styles.insuranceLinkDone]}
             onPress={handleInsuranceLink}
+            activeOpacity={insuranceDone ? 1 : 0.85}
           >
             <Text style={styles.insuranceLinkText}>
-              간병인배상책임보험 가입
+              {insuranceDone ? '간병인배상책임보험 가입 완료' : '간병인배상책임보험 가입'}
             </Text>
-            <Ionicons name="chevron-forward" size={20} color="#0066FF" />
+            {insuranceDone ? (
+              <Ionicons name="checkmark" size={20} color="#0066FF" />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color="#0066FF" />
+            )}
           </TouchableOpacity>
 
           <View style={styles.insuranceInfo}>
@@ -299,6 +320,7 @@ export default function JobApplyScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -306,6 +328,13 @@ export default function JobApplyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#fff',
   },
   header: {
@@ -411,6 +440,10 @@ const styles = StyleSheet.create({
     borderColor: '#0066FF',
     borderRadius: 12,
     marginBottom: 20,
+  },
+  insuranceLinkDone: {
+    borderColor: '#0066FF',
+    backgroundColor: '#F3F8FF',
   },
   insuranceLinkText: {
     fontSize: 16,

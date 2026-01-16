@@ -14,6 +14,7 @@ export default function ApplicationCompleteScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <View style={styles.frame}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -53,6 +54,7 @@ export default function ApplicationCompleteScreen() {
           <Text style={styles.completeButtonText}>완료</Text>
         </TouchableOpacity>
       </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -60,6 +62,13 @@ export default function ApplicationCompleteScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
     backgroundColor: '#fff',
   },
   header: {
@@ -92,7 +101,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 32,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#0066FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
