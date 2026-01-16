@@ -265,13 +265,11 @@ export default function Step3() {
   })();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.frame}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#111827" />
-        </TouchableOpacity>
+        <View style={styles.headerSide} />
         <Text style={styles.headerTitle}>{t.header}</Text>
         <TouchableOpacity
           onPress={() => setLangOpen(true)}
@@ -367,6 +365,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#70737C29',
+  },
+  headerSide: {
+    width: 24,
   },
   headerTitle: {
     fontSize: 17,

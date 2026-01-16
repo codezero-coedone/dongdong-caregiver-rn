@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Keyboard, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -47,9 +46,7 @@ export default function Index() {
       <View style={styles.frame}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={24} color="#111827" />
-        </TouchableOpacity>
+        <View style={styles.headerSide} />
         <Text style={styles.headerTitle}>{t.header}</Text>
         <TouchableOpacity
           onPress={() => setLangOpen(true)}
@@ -134,6 +131,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#70737C29',
     backgroundColor: '#fff',
+  },
+  headerSide: {
+    width: 24,
   },
   headerTitle: {
     fontSize: 17,
