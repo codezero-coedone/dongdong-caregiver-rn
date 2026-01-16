@@ -62,14 +62,39 @@ const maskPhoneNumber = (phone: string) => {
 
 export default function CareDetailScreen() {
   const router = useRouter();
-  const { type } = useLocalSearchParams<{ type?: string }>();
+  const { type, matchId: matchIdParam, date: dateParam } = useLocalSearchParams<{
+    type?: string;
+    matchId?: string;
+    date?: string;
+  }>();
 
   // type이 'completed'면 완료된 간병, 그 외는 진행 중
   const isCompleted = type === 'completed';
 
   const handleWriteJournal = () => {
-    console.log('Navigate to journal writing');
-    // TODO: Navigate to journal writing screen
+    const todayYmd = () => {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    const matchId = typeof matchIdParam === 'string' ? matchIdParam : '';
+    const date =
+      typeof dateParam === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+        ? dateParam
+        : todayYmd();
+
+    // Deterministic: always open the MY tab -> 간병일지 view.
+    // matchId/date are optional. If omitted, user can select a match/date inside the journal home.
+    const qs = matchId
+      ? `?tab=${encodeURIComponent('간병일지')}&matchId=${encodeURIComponent(
+          matchId,
+        )}&date=${encodeURIComponent(date)}`
+      : `?tab=${encodeURIComponent('간병일지')}`;
+
+    router.push(`/(tabs)/my${qs}`);
   };
 
   // 보호자 연락처 (완료된 간병은 마스킹)

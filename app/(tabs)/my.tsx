@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -28,9 +28,15 @@ const DEFAULT_USER = {
 };
 
 const TABS = ['MY홈', '간병일지', '수익'];
+const PRIMARY = '#0066FF';
 
 export default function MyScreen() {
   const router = useRouter();
+  const routeParams = useLocalSearchParams<{
+    tab?: string;
+    matchId?: string;
+    date?: string;
+  }>();
   const [activeTab, setActiveTab] = useState('MY홈');
   const [loadingMy, setLoadingMy] = useState(true);
   const [myError, setMyError] = useState<string | null>(null);
@@ -44,6 +50,22 @@ export default function MyScreen() {
   const bottomPad = Math.max(insets.bottom, 12);
   const tabBarHeight = 57 + bottomPad;
   const contentBottom = tabBarHeight + 24;
+
+  // Deep-link support (deterministic):
+  // - /(tabs)/my?tab=간병일지  -> open journaling tab
+  // - /(tabs)/my?matchId=...  -> open journaling tab (and journal home can consume matchId/date via useLocalSearchParams)
+  useEffect(() => {
+    const rawTab = typeof routeParams.tab === 'string' ? routeParams.tab : null;
+    const hasMatchId = typeof routeParams.matchId === 'string' && routeParams.matchId.length > 0;
+
+    if (rawTab === 'MY홈' || rawTab === '간병일지' || rawTab === '수익') {
+      setActiveTab(rawTab);
+      return;
+    }
+    if (hasMatchId) {
+      setActiveTab('간병일지');
+    }
+  }, [routeParams.tab, routeParams.matchId]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -253,16 +275,17 @@ export default function MyScreen() {
   }, [ongoingMatch]);
 
   const renderStars = (rating: number) => {
+    const r = Number.isFinite(rating) ? Math.max(0, Math.min(5, rating)) : 0;
+    const half = Math.round(r * 2) / 2;
     return Array(5)
       .fill(0)
-      .map((_, index) => (
-        <Ionicons
-          key={index}
-          name="star"
-          size={14}
-          color={index < rating ? '#F59E0B' : '#E5E7EB'}
-        />
-      ));
+      .map((_, index) => {
+        const v = index + 1;
+        const name =
+          half >= v ? 'star' : half >= v - 0.5 ? 'star-half' : 'star-outline';
+        const color = half >= v - 0.5 ? '#FFD900' : '#E5E7EB';
+        return <Ionicons key={index} name={name as any} size={16} color={color} />;
+      });
   };
 
   function ReferralBanner() {
@@ -270,7 +293,7 @@ export default function MyScreen() {
       <View style={styles.referralWrapper}>
         <View style={styles.referralBanner}>
           <View style={styles.referralTitleRow}>
-            <Ionicons name="people" size={22} color="#2563EB" />
+            <Ionicons name="people" size={22} color={PRIMARY} />
             <Text style={styles.referralTitle}>
               친구 초대하고 10,000원 받기!
             </Text>
@@ -287,39 +310,42 @@ export default function MyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.referralButton}>
-          <Ionicons name="ticket-outline" size={16} color="#3B82F6" />
-          <Text style={styles.referralText}>추천인코드</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>MY</Text>
-
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={24} color="#374151" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Bar */}
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.tabTextActive,
-              ]}
-            >
-              {tab}
-            </Text>
+      <View style={styles.frame}>
+        {/* Header (Top Navigation) */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.referralButton} activeOpacity={0.9}>
+            <Ionicons name="ticket-outline" size={16} color={PRIMARY} />
+            <Text style={styles.referralText}>추천인코드</Text>
           </TouchableOpacity>
-        ))}
-      </View>
+
+          <Text style={styles.headerTitle}>MY</Text>
+
+          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.9}>
+            <Ionicons name="notifications-outline" size={24} color="#171719" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Tab Bar */}
+        <View style={styles.tabBar}>
+          {TABS.map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              onPress={() => setActiveTab(tab)}
+              activeOpacity={0.9}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.tabTextActive,
+                ]}
+              >
+                {tab}
+              </Text>
+              {activeTab === tab ? <View style={styles.tabIndicator} /> : null}
+            </TouchableOpacity>
+          ))}
+        </View>
 
       {/* MY홈 Tab Content */}
       {activeTab === 'MY홈' && (
@@ -330,36 +356,27 @@ export default function MyScreen() {
           keyboardDismissMode="on-drag"
           contentContainerStyle={{ paddingBottom: contentBottom }}
         >
-          {/* Profile Card */}
-          <View style={styles.profileCard}>
+          {/* Profile Area */}
+          <View style={styles.profileArea}>
             <View style={styles.profileHeader}>
               <View style={styles.profileLeft}>
-                <View style={styles.avatar}>
-                  <Ionicons name="person" size={28} color="#9CA3AF" />
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}>{String(user.name || '')}</Text>
+                  {user.isVerified && (
+                    <Ionicons name="checkmark-circle" size={16} color={PRIMARY} />
+                  )}
                 </View>
-                <View style={styles.profileInfo}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.name}>{user.name}</Text>
-                    {user.isVerified && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={16}
-                        color="#3B82F6"
-                      />
-                    )}
-                  </View>
-                  <View style={styles.ratingRow}>
-                    <Text style={styles.ratingLabel}>평점</Text>
-                    <Text style={styles.ratingValue}>{user.rating}</Text>
-                  </View>
-                </View>
+                <Text style={styles.ratingLine}>
+                  평점 {Number.isFinite(user.rating) ? user.rating.toFixed(1) : '0.0'}
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => router.push('/profile/edit')}
+                activeOpacity={0.9}
               >
                 <Text style={styles.editButtonText}>프로필 수정</Text>
-                <Ionicons name="pencil" size={14} color="#6B7280" />
+                <Ionicons name="pencil" size={14} color="#171719" />
               </TouchableOpacity>
             </View>
 
@@ -682,6 +699,7 @@ export default function MyScreen() {
           <View style={{ height: 80 }} />
         </ScrollView>
       )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -691,6 +709,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  frame: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 375,
+    alignSelf: 'center',
+    backgroundColor: '#FFFFFF',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -698,21 +723,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#70737C14',
+    borderBottomColor: 'rgba(112, 115, 124, 0.16)',
   },
   referralButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 6,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: '#0066FF0D',
+    backgroundColor: 'rgba(0, 102, 255, 0.08)',
   },
   referralText: {
-    fontSize: 12,
-    color: '#3B82F6',
-    fontWeight: '500',
+    fontSize: 14,
+    color: PRIMARY,
+    fontWeight: '600',
   },
   headerTitle: {
     position: 'absolute',
@@ -721,7 +746,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
+    color: '#000000',
   },
   notificationButton: {
     padding: 4,
@@ -732,57 +757,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    height: 48,
   },
   tab: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    justifyContent: 'center',
   },
   tabActive: {
-    borderBottomColor: '#111827',
+    // indicator handled separately
+  },
+  tabIndicator: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    backgroundColor: '#000000',
   },
   tabText: {
-    fontSize: 15,
-    color: '#9CA3AF',
-    fontWeight: '500',
+    fontSize: 17,
+    color: 'rgba(55, 56, 60, 0.28)',
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: '#111827',
-    fontWeight: '600',
+    color: '#000000',
   },
   content: {
     flex: 1,
   },
-  profileCard: {
-    backgroundColor: '#fff',
-    padding: 20,
-    marginTop: 10,
-    marginBottom: 8,
-  },
+  profileArea: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8 },
   profileHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 20,
   },
-  profileLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#8C919634',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileInfo: {
-    gap: 4,
-  },
+  profileLeft: { gap: 2 },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -793,20 +805,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#171719',
   },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingLabel: {
+  ratingLine: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2E2F33E0',
-  },
-  ratingValue: {
-    fontSize: 16,
-    color: '#2E2F33E0',
-    fontWeight: '500',
+    color: 'rgba(46, 47, 51, 0.88)',
   },
   editButton: {
     flexDirection: 'row',
@@ -815,7 +817,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderColor: '#70737C29',
+    borderColor: 'rgba(112, 115, 124, 0.16)',
     borderRadius: 8,
   },
   editButtonText: {
@@ -834,12 +836,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   detailLabel: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'rgba(55, 56, 60, 0.61)',
   },
   detailValue: {
-    fontSize: 14,
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#171719',
   },
   section: {
     backgroundColor: '#fff',
@@ -870,22 +874,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 30,
   },
   actionCardContent: {
     flex: 1,
   },
   actionCardTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
+    color: '#000000',
+    marginBottom: 20,
   },
   actionCardDesc: {
     fontSize: 13,
-    color: '#6B7280',
+    color: 'rgba(46, 47, 51, 0.88)',
     lineHeight: 18,
   },
   reviewTitleRow: {
@@ -895,14 +902,14 @@ const styles = StyleSheet.create({
   },
   reviewRating: {
     fontSize: 16,
-    color: '#0066FF',
+    color: PRIMARY,
     fontWeight: '500',
   },
   reviewCard: {
     borderWidth: 1,
-    borderColor: '#70737C38',
-    padding: 16,
-    borderRadius: 12,
+    borderColor: 'rgba(112, 115, 124, 0.22)',
+    padding: 20,
+    borderRadius: 10,
     marginBottom: 12,
   },
   reviewHeader: {
@@ -1341,7 +1348,7 @@ const styles = StyleSheet.create({
   referralBanner: {
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-    backgroundColor: '#0066FF1A',
+    backgroundColor: 'rgba(0, 102, 255, 0.1)',
     paddingVertical: 20,
     paddingHorizontal: 20,
     alignItems: 'center',
@@ -1364,7 +1371,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0066FF',
+    backgroundColor: PRIMARY,
     borderRadius: 12,
     paddingVertical: 16,
     justifyContent: 'center',

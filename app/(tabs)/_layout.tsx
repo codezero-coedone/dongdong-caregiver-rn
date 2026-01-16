@@ -14,7 +14,7 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#3B82F6',
+        tabBarActiveTintColor: '#0066FF',
         tabBarInactiveTintColor: '#9CA3AF',
         headerShown: false,
         tabBarStyle: {
@@ -24,6 +24,11 @@ export default function TabLayout() {
           height: tabBarHeight,
           paddingTop: 8,
           paddingBottom: bottomPad,
+        },
+        // Figma-ish: icon hit area ~36x37
+        tabBarIconStyle: {
+          width: 36,
+          height: 37,
         },
         tabBarLabelStyle: {
           fontSize: 11,

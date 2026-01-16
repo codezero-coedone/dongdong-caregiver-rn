@@ -37,6 +37,8 @@ const TIME_SLOTS = ['주간', '야간', '종일'];
 const MEAL_OPTIONS = ['스스로 가능', '식사 도움 필요', '식사 불가능'];
 const TOILET_OPTIONS = ['스스로 가능', '배변 도움 필요', '배변 불가능'];
 
+const PRIMARY = '#0066FF';
+
 export default function FilterModal({ visible, onClose, onApply }: FilterModalProps) {
     const [regions, setRegions] = useState<string[]>([]);
     const [regionDropdownOpen, setRegionDropdownOpen] = useState(false);
@@ -92,6 +94,7 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
             onRequestClose={onClose}
         >
             <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+                <View style={styles.frame}>
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerPlaceholder} />
@@ -118,7 +121,7 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
                             <Ionicons
                                 name={regionDropdownOpen ? 'chevron-up' : 'chevron-down'}
                                 size={20}
-                                color="#3B82F6"
+                                color={PRIMARY}
                             />
                         </TouchableOpacity>
                         {regionDropdownOpen && (
@@ -146,7 +149,7 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
                                             style={styles.chipClose}
                                             onPress={() => removeRegion(r)}
                                         >
-                                            <Ionicons name="close" size={14} color="#3B82F6" />
+                                            <Ionicons name="close" size={14} color={PRIMARY} />
                                         </TouchableOpacity>
                                     </View>
                                 ))}
@@ -170,7 +173,7 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
                             <Ionicons
                                 name={periodDropdownOpen ? 'chevron-up' : 'chevron-down'}
                                 size={20}
-                                color="#3B82F6"
+                                color={PRIMARY}
                             />
                         </TouchableOpacity>
                         {periodDropdownOpen && (
@@ -277,6 +280,7 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
                         <Text style={styles.applyButtonText}>적용하기</Text>
                     </TouchableOpacity>
                 </View>
+                </View>
             </SafeAreaView>
         </Modal>
     );
@@ -285,6 +289,13 @@ export default function FilterModal({ visible, onClose, onApply }: FilterModalPr
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#fff',
+    },
+    frame: {
+        flex: 1,
+        width: '100%',
+        maxWidth: 375,
+        alignSelf: 'center',
         backgroundColor: '#fff',
     },
     header: {
@@ -345,7 +356,7 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderWidth: 1,
         borderColor: '#E5E7EB',
-        borderRadius: 8,
+        borderRadius: 16,
     },
     dropdownText: {
         fontSize: 15,
@@ -368,14 +379,14 @@ const styles = StyleSheet.create({
         borderBottomColor: '#F3F4F6',
     },
     dropdownItemSelected: {
-        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+        backgroundColor: 'rgba(0, 102, 255, 0.05)',
     },
     dropdownItemText: {
         fontSize: 15,
         color: '#374151',
     },
     dropdownItemTextSelected: {
-        color: '#3B82F6',
+        color: PRIMARY,
         fontWeight: '500',
     },
     toggleGroup: {
@@ -389,19 +400,19 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderWidth: 1,
         borderColor: '#E5E7EB',
-        borderRadius: 20,
+        borderRadius: 16,
         backgroundColor: '#fff',
     },
     toggleButtonActive: {
-        borderColor: '#3B82F6',
-        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+        borderColor: PRIMARY,
+        backgroundColor: '#F3F8FF',
     },
     toggleButtonText: {
         fontSize: 14,
         color: '#374151',
     },
     toggleButtonTextActive: {
-        color: '#3B82F6',
+        color: PRIMARY,
         fontWeight: '500',
     },
     footer: {
@@ -410,10 +421,11 @@ const styles = StyleSheet.create({
         borderTopColor: '#F3F4F6',
     },
     applyButton: {
-        backgroundColor: '#3B82F6',
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: PRIMARY,
+        height: 56,
+        borderRadius: 16,
         alignItems: 'center',
+        justifyContent: 'center',
     },
     applyButtonText: {
         fontSize: 16,
@@ -429,7 +441,9 @@ const styles = StyleSheet.create({
     chip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        backgroundColor: '#F3F8FF',
+        borderWidth: 1,
+        borderColor: PRIMARY,
         paddingLeft: 12,
         paddingRight: 6,
         paddingVertical: 6,
@@ -438,7 +452,7 @@ const styles = StyleSheet.create({
     },
     chipText: {
         fontSize: 13,
-        color: '#3B82F6',
+        color: PRIMARY,
         fontWeight: '500',
     },
     chipClose: {

@@ -1,18 +1,20 @@
 import api from '@/services/apiClient';
 import { devlog, isDevtoolsEnabled } from '@/services/devlog';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type MyMatch = {
   id: number;
@@ -92,8 +94,14 @@ function statusLabel(s: Status | undefined): string {
 
 export default function CaregivingJournalHome() {
   const router = useRouter();
+  const segments = useSegments();
   const routeParams = useLocalSearchParams<{ matchId?: string; date?: string }>();
   const [appliedRouteParams, setAppliedRouteParams] = useState(false);
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 12);
+  const tabBarHeight = 57 + bottomPad;
+  const contentBottom = tabBarHeight + 24;
+  const embeddedInTabs = segments[0] === '(tabs)';
 
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [matches, setMatches] = useState<MyMatch[]>([]);
@@ -107,6 +115,11 @@ export default function CaregivingJournalHome() {
     () => matches.find((m) => m.id === selectedMatchId) ?? null,
     [matches, selectedMatchId],
   );
+
+  const selectedMatchIndex = useMemo(() => {
+    if (selectedMatchId == null) return -1;
+    return matches.findIndex((m) => m.id === selectedMatchId);
+  }, [matches, selectedMatchId]);
 
   useEffect(() => {
     let alive = true;
@@ -481,6 +494,42 @@ export default function CaregivingJournalHome() {
   // NOTE: `useFocusEffect` already runs on initial focus and when dependencies change (while focused).
   // Keeping a second `useEffect` here causes duplicate API calls on first mount.
 
+  function ymdToDate(ymd: string): Date | null {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mm = Number(m[2]);
+    const dd = Number(m[3]);
+    if (!Number.isFinite(y) || !Number.isFinite(mm) || !Number.isFinite(dd)) return null;
+    const d = new Date(y, mm - 1, dd);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  function dateToYmd(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  const [matchPickerOpen, setMatchPickerOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(() => ymdToDate(selectedDate) ?? new Date());
+
+  useEffect(() => {
+    const d = ymdToDate(selectedDate);
+    if (d) setTempDate(d);
+  }, [selectedDate]);
+
+  const shiftMatch = (delta: -1 | 1) => {
+    if (matches.length <= 1) return;
+    const idx = selectedMatchIndex >= 0 ? selectedMatchIndex : 0;
+    const nextIdx = Math.max(0, Math.min(matches.length - 1, idx + delta));
+    const next = matches[nextIdx];
+    if (next) setSelectedMatchId(next.id);
+  };
+
   const shiftDate = (deltaDays: number) => {
     const d = new Date(`${selectedDate}T00:00:00`);
     if (Number.isNaN(d.getTime())) return;
@@ -488,16 +537,51 @@ export default function CaregivingJournalHome() {
     setSelectedDate(toYmd(d));
   };
 
-  const MatchChip = ({ m }: { m: MyMatch }) => {
+  const MatchCard = ({ m }: { m: MyMatch }) => {
+    const careType =
+      m.careType === 'HOSPITAL'
+        ? '병원 간병'
+        : m.careType === 'HOME'
+          ? '가정 간병'
+          : m.careType === 'NURSING_HOME'
+            ? '요양원'
+            : m.careType || '-';
+    const start = String(m.startDate || '').slice(0, 10);
+    const end = String(m.endDate || '').slice(0, 10);
+    const period = start && end ? `${start} ~ ${end}` : '';
+    return (
+      <Pressable onPress={() => setMatchPickerOpen(true)} style={styles.matchCard}>
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={styles.matchCardTitle} numberOfLines={1}>
+            {m.patientName || '환자'}
+          </Text>
+          <Text style={styles.matchCardSub} numberOfLines={1}>
+            {careType}
+            {period ? ` · ${period}` : ''}
+          </Text>
+          <Text style={styles.matchCardSub} numberOfLines={1}>
+            {m.location || '-'}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#989BA2" />
+      </Pressable>
+    );
+  };
+
+  const MatchPickRow = ({ m }: { m: MyMatch }) => {
     const active = m.id === selectedMatchId;
     return (
       <Pressable
-        onPress={() => setSelectedMatchId(m.id)}
-        style={[styles.matchChip, active && styles.matchChipActive]}
+        onPress={() => {
+          setSelectedMatchId(m.id);
+          setMatchPickerOpen(false);
+        }}
+        style={[styles.matchPickRow, active && styles.matchPickRowActive]}
       >
-        <Text style={[styles.matchChipTitle, active && styles.matchChipTitleActive]}>
+        <Text style={[styles.matchPickTitle, active && styles.matchPickTitleActive]} numberOfLines={1}>
           {m.patientName || '환자'} · #{m.id}
         </Text>
+        <Ionicons name="chevron-forward" size={16} color={active ? '#0066FF' : '#989BA2'} />
       </Pressable>
     );
   };
@@ -711,134 +795,265 @@ export default function CaregivingJournalHome() {
   };
 
   if (loadingMatches) {
-    return (
+    const body = (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#0066FF" />
+      </View>
+    );
+    return embeddedInTabs ? (
+      <View style={styles.container}>{body}</View>
+    ) : (
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#2563EB" />
-        </View>
+        {body}
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>간병일지</Text>
+  const Main = (
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingBottom: contentBottom }]}
+      showsVerticalScrollIndicator={false}
+    >
+      {!embeddedInTabs && <Text style={styles.title}>간병일지</Text>}
 
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{String(error)}</Text>
-          </View>
-        )}
+      {error && (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{String(error)}</Text>
+        </View>
+      )}
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>환자 선택</Text>
-          {matches.length > 0 ? (
-            <>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.matchRow}>
-                  {matches.map((m) => (
-                    <MatchChip key={m.id} m={m} />
-                  ))}
-                </View>
-              </ScrollView>
-              {DEVTOOLS_ENABLED && (
-                <View style={{ marginTop: 10, gap: 10 }}>
-                  <Pressable onPress={seedLockedJournal409} style={styles.ctaBtn}>
-                    <Text style={styles.ctaBtnText}>DEV: 종료(409) 테스트 자동 생성</Text>
-                  </Pressable>
-                </View>
-              )}
-            </>
-          ) : (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>
-                아직 매칭이 없습니다. 공고에 지원하면 매칭이 생성되고 일지를 작성할 수 있습니다.
-              </Text>
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>담당 환자</Text>
+          {matches.length > 1 ? (
+            <View style={styles.pagerRow}>
               <Pressable
-                onPress={() => router.replace('/(tabs)')}
-                style={[styles.ctaBtn, styles.ctaBtnGhost]}
+                onPress={() => shiftMatch(-1)}
+                style={[
+                  styles.pagerBtn,
+                  (selectedMatchIndex <= 0 || selectedMatchIndex < 0) && styles.pagerBtnDisabled,
+                ]}
+                disabled={selectedMatchIndex <= 0 || selectedMatchIndex < 0}
               >
-                <Text style={styles.ctaBtnGhostText}>홈(공고)로 이동</Text>
+                <Ionicons name="chevron-back" size={16} color="#171719" />
               </Pressable>
-              {DEVTOOLS_ENABLED && (
-                <>
-                  <Pressable onPress={seedMatchFromFirstJob} style={styles.ctaBtn}>
-                    <Text style={styles.ctaBtnText}>DEV: 첫 공고 자동 지원(매칭 생성)</Text>
-                  </Pressable>
-                  <Pressable onPress={seedMatchByCreatingRequest} style={styles.ctaBtn}>
-                    <Text style={styles.ctaBtnText}>DEV: 환자+공고+매칭 자동 생성</Text>
-                  </Pressable>
-                </>
-              )}
+              <Pressable
+                onPress={() => shiftMatch(1)}
+                style={[
+                  styles.pagerBtn,
+                  (selectedMatchIndex >= matches.length - 1 || selectedMatchIndex < 0) &&
+                    styles.pagerBtnDisabled,
+                ]}
+                disabled={selectedMatchIndex >= matches.length - 1 || selectedMatchIndex < 0}
+              >
+                <Ionicons name="chevron-forward" size={16} color="#171719" />
+              </Pressable>
             </View>
-          )}
+          ) : null}
         </View>
 
-        <View style={styles.dateRow}>
-          <Pressable onPress={() => shiftDate(-1)} style={styles.dateNavBtn}>
-            <Ionicons name="chevron-back" size={20} color="#111827" />
-          </Pressable>
-          <View style={styles.dateCenter}>
-            <Text style={styles.dateText}>{toDotYmd(selectedDate)}</Text>
-            <Ionicons name="chevron-down" size={14} color="#6B7280" />
-          </View>
-          <Pressable onPress={() => shiftDate(1)} style={styles.dateNavBtn}>
-            <Ionicons name="chevron-forward" size={20} color="#111827" />
-          </Pressable>
-        </View>
-
-        <Text style={styles.sectionTitle}>오늘의 일지</Text>
-
-        {loading ? (
-          <View style={styles.centerSmall}>
-            <ActivityIndicator size="small" color="#2563EB" />
-          </View>
-        ) : !selectedMatch ? (
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyText}>매칭(환자)을 선택해 주세요.</Text>
-          </View>
+        {matches.length > 0 ? (
+          <>
+            {selectedMatch ? <MatchCard m={selectedMatch} /> : null}
+            {DEVTOOLS_ENABLED && (
+              <View style={{ marginTop: 10, gap: 10 }}>
+                <Pressable onPress={seedLockedJournal409} style={styles.ctaBtn}>
+                  <Text style={styles.ctaBtnText}>DEV: 종료(409) 테스트 자동 생성</Text>
+                </Pressable>
+              </View>
+            )}
+          </>
         ) : (
-          <View style={{ gap: 12 }}>
-            <MealCard
-              title="아침"
-              timeRange="06:00 ~ 11:00"
-              keyName="morning"
-              v={journal?.breakfast}
-            />
-            <MealCard
-              title="점심"
-              timeRange="11:00 ~ 15:00"
-              keyName="lunch"
-              v={journal?.lunch}
-            />
-            <MealCard
-              title="저녁"
-              timeRange="15:00 ~ 20:00"
-              keyName="dinner"
-              v={journal?.dinner}
-            />
-            <MedicalCard v={journal?.medicalRecord} />
-            <ActivityCard v={journal?.activityRecord} />
-            <NotesCard v={journal?.notes} />
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>
+              아직 매칭이 없습니다. 공고에 지원하면 매칭이 생성되고 일지를 작성할 수 있습니다.
+            </Text>
+            <Pressable
+              onPress={() => router.replace('/(tabs)')}
+              style={[styles.ctaBtn, styles.ctaBtnGhost]}
+            >
+              <Text style={styles.ctaBtnGhostText}>홈(공고)로 이동</Text>
+            </Pressable>
+            {DEVTOOLS_ENABLED && (
+              <>
+                <Pressable onPress={seedMatchFromFirstJob} style={styles.ctaBtn}>
+                  <Text style={styles.ctaBtnText}>DEV: 첫 공고 자동 지원(매칭 생성)</Text>
+                </Pressable>
+                <Pressable onPress={seedMatchByCreatingRequest} style={styles.ctaBtn}>
+                  <Text style={styles.ctaBtnText}>DEV: 환자+공고+매칭 자동 생성</Text>
+                </Pressable>
+              </>
+            )}
           </View>
         )}
-      </ScrollView>
+      </View>
+
+      <View style={styles.dateRow}>
+        <Pressable onPress={() => shiftDate(-1)} style={styles.dateNavBtn}>
+          <Ionicons name="chevron-back" size={20} color="#171719" />
+        </Pressable>
+        <Pressable onPress={() => setDatePickerOpen(true)} style={styles.dateCenter}>
+          <Text style={styles.dateText}>{toDotYmd(selectedDate)}</Text>
+          <Ionicons name="chevron-down" size={14} color="#171719" />
+        </Pressable>
+        <Pressable onPress={() => shiftDate(1)} style={styles.dateNavBtn}>
+          <Ionicons name="chevron-forward" size={20} color="#171719" />
+        </Pressable>
+      </View>
+
+      <Text style={[styles.sectionTitle, { marginBottom: 10 }]}>오늘의 일지</Text>
+
+      {loading ? (
+        <View style={styles.centerSmall}>
+          <ActivityIndicator size="small" color="#0066FF" />
+        </View>
+      ) : !selectedMatch ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>매칭(환자)을 선택해 주세요.</Text>
+        </View>
+      ) : (
+        <View style={{ gap: 12 }}>
+          <MealCard
+            title="아침"
+            timeRange="06:00 ~ 11:00"
+            keyName="morning"
+            v={journal?.breakfast}
+          />
+          <MealCard
+            title="점심"
+            timeRange="11:00 ~ 15:00"
+            keyName="lunch"
+            v={journal?.lunch}
+          />
+          <MealCard
+            title="저녁"
+            timeRange="15:00 ~ 20:00"
+            keyName="dinner"
+            v={journal?.dinner}
+          />
+          <MedicalCard v={journal?.medicalRecord} />
+          <ActivityCard v={journal?.activityRecord} />
+          <NotesCard v={journal?.notes} />
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  const wrapper = embeddedInTabs ? (
+    <View style={styles.container}>{Main}</View>
+  ) : (
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      {Main}
     </SafeAreaView>
+  );
+
+  return (
+    <>
+      {wrapper}
+
+      {/* Match picker modal */}
+      <Modal
+        visible={matchPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMatchPickerOpen(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setMatchPickerOpen(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>담당 환자 선택</Text>
+              <Pressable onPress={() => setMatchPickerOpen(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color="#171719" />
+              </Pressable>
+            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ padding: 16, gap: 10 }}
+            >
+              {matches.map((m) => (
+                <MatchPickRow key={m.id} m={m} />
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Date picker modal */}
+      <Modal
+        visible={datePickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDatePickerOpen(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setDatePickerOpen(false)}>
+          <Pressable style={styles.dateSheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Pressable
+                onPress={() => {
+                  setTempDate(ymdToDate(selectedDate) ?? new Date());
+                  setDatePickerOpen(false);
+                }}
+              >
+                <Text style={styles.modalCancel}>취소</Text>
+              </Pressable>
+              <Text style={styles.modalTitle}>날짜 선택</Text>
+              <Pressable
+                onPress={() => {
+                  setSelectedDate(dateToYmd(tempDate));
+                  setDatePickerOpen(false);
+                }}
+              >
+                <Text style={styles.modalConfirm}>확인</Text>
+              </Pressable>
+            </View>
+            <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display="spinner"
+                onChange={(event: DateTimePickerEvent, d?: Date) => {
+                  // Android can emit `dismissed` with undefined date; ignore.
+                  if (d) setTempDate(d);
+                }}
+                locale="ko"
+              />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { paddingHorizontal: 20, paddingTop: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   centerSmall: { paddingVertical: 16, alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '700', color: '#111827', marginBottom: 12 },
+  title: { fontSize: 22, fontWeight: '700', color: '#171719', marginBottom: 12 },
   section: { marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 10 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#000000' },
+  pagerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pagerBtn: {
+    width: 37,
+    height: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(112, 115, 124, 0.16)',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  pagerBtnDisabled: { opacity: 0.35 },
   ctaBtn: {
     marginTop: 10,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0066FF',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -852,30 +1067,41 @@ const styles = StyleSheet.create({
   },
   ctaBtnGhostText: { color: '#1D4ED8', fontWeight: '800', fontSize: 13 },
 
-  matchRow: { flexDirection: 'row', gap: 10, paddingRight: 10 },
-  matchChip: {
+  matchCard: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+    width: 335,
+    height: 90,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
-    minWidth: 140,
+    borderColor: 'rgba(112, 115, 124, 0.22)',
+    borderRadius: 14,
+    alignSelf: 'center',
   },
-  matchChipActive: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
-  matchChipTitle: { fontWeight: '800', color: '#111827' },
-  matchChipTitleActive: { color: '#1D4ED8' },
+  matchCardTitle: { fontSize: 18, fontWeight: '600', color: '#171719' },
+  matchCardSub: { fontSize: 13, fontWeight: '500', color: 'rgba(55,56,60,0.61)' },
 
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
+    marginTop: 14,
     marginBottom: 16,
   },
   dateNavBtn: { padding: 8 },
-  dateCenter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dateText: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  dateCenter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 0,
+    gap: 8,
+    height: 26,
+    flexGrow: 1,
+  },
+  dateText: { fontSize: 18, fontWeight: '600', color: '#171719', textAlign: 'center' },
 
   card: {
     borderWidth: 1,
@@ -889,8 +1115,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  cardEmptyText: { marginTop: 10, color: '#6B7280' },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: '#171719' },
+  cardEmptyText: {
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: '400',
+    color: 'rgba(46, 47, 51, 0.88)',
+    letterSpacing: 0.0145 * 14,
+  },
 
   summaryRow: {
     flexDirection: 'row',
@@ -931,6 +1163,51 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: { color: '#B91C1C' },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '75%',
+  },
+  dateSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: '#171719' },
+  modalCloseBtn: { padding: 6, marginLeft: 8 },
+  modalCancel: { fontSize: 16, color: '#6B7280' },
+  modalConfirm: { fontSize: 16, fontWeight: '600', color: '#0066FF' },
+  matchPickRow: {
+    height: 56,
+    borderWidth: 1,
+    borderColor: 'rgba(112, 115, 124, 0.22)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+  },
+  matchPickRowActive: { borderColor: '#0066FF', backgroundColor: 'rgba(0,102,255,0.06)' },
+  matchPickTitle: { fontSize: 15, fontWeight: '600', color: '#171719', flexShrink: 1 },
+  matchPickTitleActive: { color: '#0066FF' },
 });
 
 
