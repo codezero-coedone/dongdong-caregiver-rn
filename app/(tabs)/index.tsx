@@ -33,49 +33,21 @@ type FilterState = {
 
 const PRIMARY = '#0066FF';
 
-// 목업 데이터
-const MOCK_JOBS = [
-  {
-    id: '1',
-    type: '기간제 간병',
-    timeAgo: '2시간 전',
-    patientName: '이환자',
-    patientAge: 68,
-    patientGender: '남',
-    tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
-    location: '서울특별시 강남구 삼성동',
-    period: '2025.11.15 ~ 11.30, 매일',
-    hours: '24시간',
-    pay: '시급 15,000원',
-  },
-  {
-    id: '2',
-    type: '시간제 간병',
-    urgency: '마감 임박',
-    timeAgo: '7일 전',
-    patientName: '이환자',
-    patientAge: 68,
-    patientGender: '남',
-    tags: ['후두암 4기', '식사 불가능', '배변 도움 필요'],
-    location: '서울특별시 강남구 삼성동',
-    period: '2025.11.08 ~ 11.15, 평일',
-    hours: '10시간',
-    pay: '시급 15,000원',
-  },
-  {
-    id: '3',
-    type: '기간제 간병',
-    timeAgo: '1일 전',
-    patientName: '이환자',
-    patientAge: 68,
-    patientGender: '남',
-    tags: ['폐암 3기', '식사 가능'],
-    location: '서울특별시 송파구 잠실동',
-    period: '2025.12.01 ~ 12.15, 매일',
-    hours: '24시간',
-    pay: '시급 18,000원',
-  },
-];
+type UiJob = {
+  id: string;
+  type: string;
+  urgency?: string;
+  timeAgo: string;
+  patientName: string;
+  patientAge: number;
+  patientGender: string;
+  tags: string[];
+  location: string;
+  period: string;
+  hours: string;
+  pay: string;
+  createdAtMs?: number;
+};
 
 // 정렬 옵션
 const SORT_OPTIONS = [
@@ -86,19 +58,21 @@ const SORT_OPTIONS = [
 
 type ApiJobListing = {
   id: string;
+  patientName?: string;
   careType: string;
   locationSummary: string;
   startDate: string;
   endDate: string;
   patientGender: string;
   patientAge: number;
+  patientDiagnosis?: string;
+  patientMobilityLevel?: string;
   dailyRate: number;
   createdAt: string;
 };
 
-type UiJob = (typeof MOCK_JOBS)[0];
 interface JobCardProps {
-  job: (typeof MOCK_JOBS)[0];
+  job: UiJob;
 }
 
 function JobCard({ job }: JobCardProps) {
@@ -342,16 +316,16 @@ export default function HomeScreen() {
     return hit?.label ?? '최신순';
   };
 
-  const jobsForUi: (UiJob & { createdAtMs?: number })[] =
+  const jobsForUi: UiJob[] =
     apiJobs.length > 0
       ? apiJobs.map((j: ApiJobListing) => ({
           id: j.id,
           type: careTypeLabel(j.careType),
           timeAgo: timeAgo(j.createdAt) || '신규',
-          patientName: '환자',
+          patientName: String(j.patientName || '환자'),
           patientAge: j.patientAge ?? 0,
           patientGender: j.patientGender ?? '',
-          tags: [],
+          tags: [j.patientDiagnosis, j.patientMobilityLevel].filter(Boolean).map((x) => String(x)).slice(0, 3),
           location: j.locationSummary ?? '',
           period: `${formatYmd(j.startDate)} ~ ${formatYmd(j.endDate)}`,
           hours: '',

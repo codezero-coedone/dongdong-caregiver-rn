@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,45 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Button from '../../components/ui/Button';
-
-// Mock 상세 데이터
-const MOCK_CARE_DETAIL = {
-  jobNumber: '12345',
-  daysRemaining: 15,
-  patient: {
-    name: '이환자',
-    age: 68,
-    gender: '남',
-    birthDate: '1945.12.12',
-    height: '173cm',
-    weight: '60kg',
-  },
-  tags: ['폐암 3기', '항암치료 중', '부분 도움'],
-  status: {
-    diagnosis: '폐렴',
-    mealAssist: '부분적 도움 필요',
-    mobility: '부족 필요, 지팡이 사용',
-    requests: '계단 이용 불가',
-  },
-  guardian: {
-    name: '나보호',
-    phone: '010-1234-5678',
-    relation: '자녀',
-  },
-  location: {
-    hospital: '서울아산병원',
-    address: '서울 송파구 올림픽로 43길 88',
-    detail: 'A동 1405호',
-  },
-  period: {
-    dateRange: '2025.11.15 ~ 2025.11.30',
-    totalDays: 15,
-    weekdays: '월, 화, 수',
-    workHours: '09:00 ~ 18:00',
-    hoursPerDay: 9,
-    callRequestTime: '09:00, 13:00',
-  },
-};
+import { fetchMyMatches, type ApiMyMatch } from '@/services/careHistoryService';
 
 // 전화번호 마스킹 함수
 const maskPhoneNumber = (phone: string) => {
@@ -71,6 +34,78 @@ export default function CareDetailScreen() {
   // type이 'completed'면 완료된 간병, 그 외는 진행 중
   const isCompleted = type === 'completed';
 
+  const matchId = typeof matchIdParam === 'string' ? Number(matchIdParam) : NaN;
+  const [loading, setLoading] = useState(false);
+  const [row, setRow] = useState<ApiMyMatch | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    let alive = true;
+    if (!Number.isFinite(matchId) || matchId <= 0) {
+      setRow(null);
+      setError('matchId가 없습니다.');
+      return () => {
+        alive = false;
+      };
+    }
+
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        const rows = await fetchMyMatches();
+        if (!alive) return;
+        const hit = rows.find((m) => m.id === matchId) ?? null;
+        if (!hit) {
+          setError('내역을 찾을 수 없습니다.');
+          setRow(null);
+          return;
+        }
+        setRow(hit);
+      } catch (e: any) {
+        if (!alive) return;
+        setError(e?.response?.data?.message || e?.message || '조회에 실패했습니다.');
+        setRow(null);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [matchId]);
+
+  const tags = useMemo(() => {
+    if (!row) return [];
+    const out: string[] = [];
+    if (row.patientDiagnosis) out.push(String(row.patientDiagnosis));
+    if (row.patientMobilityLevel) out.push(String(row.patientMobilityLevel));
+    if (Array.isArray(row.patientAssistiveDevices)) {
+      for (const t of row.patientAssistiveDevices) {
+        const s = String(t || '').trim();
+        if (s) out.push(s);
+      }
+    }
+    return out.slice(0, 6);
+  }, [row]);
+
+  const ymdDot = (iso: string | null | undefined): string => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}.${m}.${day}`;
+  };
+
+  const genderLabel = (v: string | null | undefined): string => {
+    const s = String(v || '').toUpperCase();
+    if (s === 'MALE' || s === 'M') return '남';
+    if (s === 'FEMALE' || s === 'F') return '여';
+    return s || '-';
+  };
+
   const handleWriteJournal = () => {
     const todayYmd = () => {
       const d = new Date();
@@ -79,28 +114,20 @@ export default function CareDetailScreen() {
       const day = String(d.getDate()).padStart(2, '0');
       return `${y}-${m}-${day}`;
     };
-
-    const matchId = typeof matchIdParam === 'string' ? matchIdParam : '';
     const date =
       typeof dateParam === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
         ? dateParam
         : todayYmd();
 
-    // Deterministic: always open the MY tab -> 간병일지 view.
-    // matchId/date are optional. If omitted, user can select a match/date inside the journal home.
-    const qs = matchId
-      ? `?tab=${encodeURIComponent('간병일지')}&matchId=${encodeURIComponent(
-          matchId,
-        )}&date=${encodeURIComponent(date)}`
-      : `?tab=${encodeURIComponent('간병일지')}`;
-
-    router.push(`/(tabs)/my${qs}`);
+    if (!Number.isFinite(matchId) || matchId <= 0) return;
+    router.push(
+      `/caregiving-journal?matchId=${encodeURIComponent(String(matchId))}&date=${encodeURIComponent(date)}`,
+    );
   };
 
-  // 보호자 연락처 (완료된 간병은 마스킹)
-  const guardianPhone = isCompleted
-    ? maskPhoneNumber(MOCK_CARE_DETAIL.guardian.phone)
-    : MOCK_CARE_DETAIL.guardian.phone;
+  // 보호자 연락처: 백엔드에 phone이 없어 묵데이터를 쓰지 않습니다.
+  // 완료된 간병의 경우엔 노출 자체를 하지 않고, 진행 중인 경우도 "-"로 처리합니다.
+  const guardianPhone = isCompleted ? '-' : '-';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -113,10 +140,17 @@ export default function CareDetailScreen() {
 
         <View style={{ width: 24 }} />
       </View>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {loading && (
+          <View style={{ paddingVertical: 20 }}>
+            <ActivityIndicator />
+          </View>
+        )}
+        {error && (
+          <Text style={{ color: '#EF4444', paddingHorizontal: 20, paddingTop: 10 }}>
+            {error}
+          </Text>
+        )}
         {/* 환자 정보 섹션 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
@@ -131,23 +165,29 @@ export default function CareDetailScreen() {
             {/* 공고번호 (완료된 간병만 표시) */}
             {isCompleted && (
               <Text style={styles.jobNumber}>
-                공고번호 {MOCK_CARE_DETAIL.jobNumber}
+                공고번호 {Number.isFinite(matchId) ? String(matchId) : '-'}
               </Text>
             )}
 
             {/* 남은 일수 (진행 중인 간병만 표시) */}
             {!isCompleted && (
               <Text style={styles.daysRemaining}>
-                {MOCK_CARE_DETAIL.daysRemaining}일 남음
+                {row?.endDate ? (() => {
+                  const end = new Date(row.endDate);
+                  const days = Number.isNaN(end.getTime())
+                    ? 0
+                    : Math.max(0, Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                  return `${days}일 남음`;
+                })() : '—'}
               </Text>
             )}
 
             <Text style={styles.patientName}>
-              {MOCK_CARE_DETAIL.patient.name} ({MOCK_CARE_DETAIL.patient.age}세,{' '}
-              {MOCK_CARE_DETAIL.patient.gender})
+              {row?.patientName ?? '-'} ({Number(row?.patientAge ?? 0)}세,{' '}
+              {genderLabel(row?.patientGender)})
             </Text>
             <View style={styles.tagsContainer}>
-              {MOCK_CARE_DETAIL.tags.map((tag, index) => (
+              {tags.map((tag, index) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{tag}</Text>
                 </View>
@@ -166,21 +206,21 @@ export default function CareDetailScreen() {
                 <Text style={styles.infoLabel}>생년월일</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.patient.birthDate}
+                  {row?.patientBirthDate ? row.patientBirthDate : '-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>키</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.patient.height}
+                  {typeof row?.patientHeight === 'number' ? `${row.patientHeight}cm` : '-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>몸무게</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.patient.weight}
+                  {typeof row?.patientWeight === 'number' ? `${row.patientWeight}kg` : '-'}
                 </Text>
               </View>
             </View>
@@ -192,28 +232,28 @@ export default function CareDetailScreen() {
                 <Text style={styles.infoLabel}>진단명</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.status.diagnosis}
+                  {row?.patientDiagnosis ?? '-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>식사 도움</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.status.mealAssist}
+                  {'-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>거동 상태</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.status.mobility}
+                  {row?.patientMobilityLevel ?? '-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>요청 사항</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.status.requests}
+                  {'-'}
                 </Text>
               </View>
             </View>
@@ -225,7 +265,7 @@ export default function CareDetailScreen() {
                 <Text style={styles.infoLabel}>이름</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.guardian.name}
+                  {'-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
@@ -237,7 +277,7 @@ export default function CareDetailScreen() {
                 <Text style={styles.infoLabel}>관계</Text>
                 <View style={styles.verticalDivider} />
                 <Text style={styles.infoValue}>
-                  {MOCK_CARE_DETAIL.guardian.relation}
+                  {'-'}
                 </Text>
               </View>
             </View>
@@ -252,13 +292,7 @@ export default function CareDetailScreen() {
           </Text>
           <View style={styles.locationCard}>
             <Text style={styles.locationText}>
-              {MOCK_CARE_DETAIL.location.hospital}(
-              {MOCK_CARE_DETAIL.location.address})
-            </Text>
-          </View>
-          <View style={styles.locationCard}>
-            <Text style={styles.locationText}>
-              {MOCK_CARE_DETAIL.location.detail}
+              {row?.location ?? '-'}
             </Text>
           </View>
         </View>
@@ -271,25 +305,7 @@ export default function CareDetailScreen() {
           </Text>
           <View style={styles.periodCard}>
             <Text style={styles.periodText}>
-              {MOCK_CARE_DETAIL.period.dateRange} (
-              {MOCK_CARE_DETAIL.period.totalDays}일간)
-            </Text>
-          </View>
-          <View style={styles.periodCard}>
-            <Text style={styles.periodText}>
-              {MOCK_CARE_DETAIL.period.weekdays}
-            </Text>
-          </View>
-          <View style={styles.periodCard}>
-            <Text style={styles.periodText}>
-              {MOCK_CARE_DETAIL.period.workHours} (하루{' '}
-              {MOCK_CARE_DETAIL.period.hoursPerDay}시간)
-            </Text>
-          </View>
-          <Text style={styles.subSectionTitle}>전화 요청 시간</Text>
-          <View style={styles.periodCard}>
-            <Text style={styles.periodText}>
-              {MOCK_CARE_DETAIL.period.callRequestTime}
+              {row ? `${ymdDot(row.startDate)} ~ ${ymdDot(row.endDate)}` : '-'}
             </Text>
           </View>
         </View>

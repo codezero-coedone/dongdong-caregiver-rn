@@ -12,26 +12,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { setInsuranceAutoEnrolled } from '@/services/insuranceService';
+import { apiClient } from '@/services/apiClient';
 
-// Mock 보험 데이터
-const MOCK_INSURANCE_DATA = {
-  caregiverName: '김간병',
-  insurerName: 'OO보험',
-  insuranceType: '전문인배상책임보험',
-  period: {
-    start: '2025.11.21. 13:00',
-    end: '2025.11.25 10:00',
-  },
-  location: '서울특별시 동작구 흑석로 102 (흑석동)',
-  coverage: {
-    type: '전문인 배상책임위험(대인/대물)',
-    work: '간병인업무(개인간병)',
-    perIncident: '10,000,000원',
-    perYear: '연 100,000,000원',
-    deductible: '300,000원',
-  },
-  careDays: 15,
-  totalPremium: '2,100원',
+type ApiJobDetail = {
+  id: string;
+  careType: string;
+  locationSummary: string;
+  startDate: string;
+  endDate: string;
+  patientName?: string;
+  patientGender: string;
+  patientAge: number;
+  patientDiagnosis?: string;
+  patientMobilityLevel?: string;
+  dailyRate: number;
+  createdAt: string;
+  location: string;
 };
 
 // 약관 상세 내용
@@ -65,6 +61,58 @@ const AGREEMENT_ITEMS = [
 export default function InsuranceScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+
+  const [loading, setLoading] = useState(false);
+  const [job, setJob] = useState<ApiJobDetail | null>(null);
+  const [meName, setMeName] = useState<string>('');
+
+  const fmtYmdHm = (iso: string | null | undefined): string => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${y}.${m}.${day}. ${hh}:${mm}`;
+  };
+
+  const calcDays = (startIso: string | null | undefined, endIso: string | null | undefined): number => {
+    const s = startIso ? new Date(startIso) : null;
+    const e = endIso ? new Date(endIso) : null;
+    if (!s || !e) return 0;
+    const sm = s.getTime();
+    const em = e.getTime();
+    if (Number.isNaN(sm) || Number.isNaN(em)) return 0;
+    return Math.max(0, Math.ceil((em - sm) / (1000 * 60 * 60 * 24)));
+  };
+
+  React.useEffect(() => {
+    let alive = true;
+    if (!id) return () => { alive = false; };
+    setLoading(true);
+    (async () => {
+      try {
+        const [jobRes, meRes] = await Promise.all([
+          apiClient.get(`/jobs/${id}`),
+          apiClient.get('/me'),
+        ]);
+        if (!alive) return;
+        const jobData = (jobRes.data as any)?.data as ApiJobDetail | undefined;
+        const meData = (meRes.data as any)?.data as any;
+        setJob(jobData ?? null);
+        setMeName(String(meData?.name || ''));
+      } catch {
+        if (!alive) return;
+        setJob(null);
+        setMeName('');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [id]);
 
   // 동의 상태
   const [agreements, setAgreements] = useState<Record<string, boolean>>({
@@ -127,10 +175,10 @@ export default function InsuranceScreen() {
         {/* 보험 소개 */}
         <View style={styles.section}>
           <Text style={styles.insuranceTitle}>
-            {MOCK_INSURANCE_DATA.caregiverName} 간병인을 위한{'\n'}
-            {MOCK_INSURANCE_DATA.insurerName}
+            {(meName || '간병인')} 간병인을 위한{'\n'}
+            {'동동'}
             {'\n'}
-            {MOCK_INSURANCE_DATA.insuranceType}
+            {'전문인배상책임보험'}
           </Text>
           <Text style={styles.insuranceDesc}>
             전문인배상책임보험은 돌봄 서비스 중 발생할 수 있는 간병인의
@@ -170,7 +218,7 @@ export default function InsuranceScreen() {
               </View>
               <View style={styles.tableCellRight}>
                 <Text style={styles.tableValueText}>
-                  2025.11.21. 13:00{'\n'}~ 2025.11.25 10:00
+                  {job ? `${fmtYmdHm(job.startDate)}\n~ ${fmtYmdHm(job.endDate)}` : '-'}
                 </Text>
               </View>
             </View>
@@ -182,7 +230,7 @@ export default function InsuranceScreen() {
               </View>
               <View style={styles.tableCellRight}>
                 <Text style={styles.tableValueText}>
-                  서울특별시 동작구 흑석로 102 (흑석동)
+                  {job?.location ?? '-'}
                 </Text>
               </View>
             </View>
@@ -216,7 +264,7 @@ export default function InsuranceScreen() {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>이번 간병 기간</Text>
             <Text style={styles.summaryValue}>
-              총 {MOCK_INSURANCE_DATA.careDays}일
+              총 {calcDays(job?.startDate, job?.endDate)}일
             </Text>
           </View>
 
@@ -225,7 +273,7 @@ export default function InsuranceScreen() {
           <View style={styles.premiumRow}>
             <Text style={styles.premiumLabel}>총 기간 보험료</Text>
             <Text style={styles.premiumValue}>
-              {MOCK_INSURANCE_DATA.totalPremium}
+              {'-'}
             </Text>
           </View>
         </View>

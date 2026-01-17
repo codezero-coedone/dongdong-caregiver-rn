@@ -14,67 +14,132 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CareHistoryCard, {
   CareRecord,
 } from '../../components/care/CareHistoryCard';
+import { fetchMyMatches, type ApiMyMatch } from '@/services/careHistoryService';
+import { devlog, isDevtoolsEnabled } from '@/services/devlog';
+import { useAuthStore } from '@/store/authStore';
 
-// Mock 진행 중인 간병 데이터
-const MOCK_ONGOING_CARE: CareRecord = {
-  id: 'ongoing-1',
-  patient: {
-    name: '이환자',
-    age: 68,
-    gender: '남',
-  },
-  tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
-  period: '2025.11.15~11.30',
-  diagnosis: '폐렴 및 심압',
-  status: 'ongoing',
-  daysRemaining: 15,
-};
+const DEVTOOLS_ENABLED = isDevtoolsEnabled();
 
-// Mock 과거 간병 내역 데이터
-const MOCK_PAST_CARE: CareRecord[] = [
-  {
-    id: '1',
-    jobNumber: '12345',
-    patient: { name: '이환자', age: 68, gender: '남' },
-    tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
-    period: '2025.11.15 ~11.30',
-    address: '서울특별시 강남구 대치동 남원빌라 3동 4',
+function fmtYmd(iso: string | null | undefined): string {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day}`;
+}
+
+function periodLabel(start: string | null | undefined, end: string | null | undefined): string {
+  return `${fmtYmd(start)} ~ ${fmtYmd(end)}`;
+}
+
+function genderLabel(v: string | null | undefined): string {
+  const s = String(v || '').toUpperCase();
+  if (s === 'MALE' || s === 'M') return '남';
+  if (s === 'FEMALE' || s === 'F') return '여';
+  return s || '-';
+}
+
+function daysRemaining(endIso: string | null | undefined): number | undefined {
+  if (!endIso) return undefined;
+  const end = new Date(endIso);
+  if (Number.isNaN(end.getTime())) return undefined;
+  const diffMs = end.getTime() - Date.now();
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(0, days);
+}
+
+function buildTags(m: ApiMyMatch): string[] {
+  const out: string[] = [];
+  if (m.patientDiagnosis) out.push(String(m.patientDiagnosis));
+  if (m.patientMobilityLevel) out.push(String(m.patientMobilityLevel));
+  if (Array.isArray(m.patientAssistiveDevices)) {
+    for (const t of m.patientAssistiveDevices) {
+      const s = String(t || '').trim();
+      if (s) out.push(s);
+    }
+  }
+  return out.slice(0, 3);
+}
+
+function toOngoingRecord(m: ApiMyMatch): CareRecord {
+  return {
+    id: String(m.id),
+    patient: {
+      name: String(m.patientName || ''),
+      age: Number(m.patientAge ?? 0),
+      gender: genderLabel(m.patientGender),
+    },
+    tags: buildTags(m),
+    period: periodLabel(m.startDate, m.endDate),
+    diagnosis: m.patientDiagnosis ? String(m.patientDiagnosis) : undefined,
+    status: 'ongoing',
+    daysRemaining: daysRemaining(m.endDate),
+  };
+}
+
+function toPastRecord(m: ApiMyMatch): CareRecord {
+  return {
+    id: String(m.id),
+    jobNumber: String(m.id),
+    patient: {
+      name: String(m.patientName || ''),
+      age: Number(m.patientAge ?? 0),
+      gender: genderLabel(m.patientGender),
+    },
+    tags: buildTags(m),
+    period: periodLabel(m.startDate, m.endDate),
+    address: m.location ? String(m.location) : undefined,
     status: 'completed',
-  },
-  {
-    id: '2',
-    jobNumber: '12345',
-    patient: { name: '이환자', age: 68, gender: '남' },
-    tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
-    period: '2025.11.15 ~11.30',
-    address: '서울특별시 강남구 대치동 남원빌라 3동 4',
-    status: 'completed',
-  },
-  {
-    id: '3',
-    jobNumber: '12345',
-    patient: { name: '이환자', age: 68, gender: '남' },
-    tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
-    period: '2025.11.15 ~11.30',
-    address: '서울특별시 강남구 대치동 남원빌라 3동 4',
-    status: 'completed',
-  },
-  {
-    id: '4',
-    jobNumber: '12345',
-    patient: { name: '이환자', age: 68, gender: '남' },
-    tags: ['폐암 3기', '식사 가능', '배변 도움 필요'],
-    period: '2025.11.15 ~11.30',
-    address: '서울특별시 강남구 대치동 남원빌라 3동 4',
-    status: 'completed',
-  },
-];
+  };
+}
 
 export default function CareHistoryScreen() {
   const router = useRouter();
+  const isLoggedIn = useAuthStore((s) => s.isAuthenticated);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [matches, setMatches] = useState<ApiMyMatch[]>([]);
 
-  const filteredRecords = MOCK_PAST_CARE.filter((record) => {
+  React.useEffect(() => {
+    let alive = true;
+    if (!isLoggedIn) {
+      setMatches([]);
+      return () => {
+        alive = false;
+      };
+    }
+    setLoading(true);
+    (async () => {
+      try {
+        const rows = await fetchMyMatches();
+        if (!alive) return;
+        setMatches(rows);
+      } catch (e: any) {
+        if (!alive) return;
+        setMatches([]);
+        if (DEVTOOLS_ENABLED) {
+          devlog({ scope: 'API', level: 'warn', message: `care-history fetch failed: ${String(e?.message || e)}` });
+        }
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [isLoggedIn]);
+
+  const ongoingMatch =
+    matches.find((m) => String(m.status) === 'IN_PROGRESS') ??
+    null;
+
+  const pastMatches = matches.filter((m) => String(m.status) === 'COMPLETED');
+
+  const filteredRecords = pastMatches
+    .map(toPastRecord)
+    .filter((record) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -85,17 +150,24 @@ export default function CareHistoryScreen() {
 
   const handleDetailPress = (record: CareRecord) => {
     console.log('Detail pressed:', record.id);
-    router.push('/care-history/detail?type=completed');
+    router.push(`/care-history/detail?type=completed&matchId=${encodeURIComponent(record.id)}`);
   };
 
   const handleWriteJournalPress = () => {
-    console.log('Write journal pressed');
-    // TODO: Navigate to journal writing screen
+    if (!ongoingMatch) return;
+    const today = (() => {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    })();
+    router.push(`/caregiving-journal?matchId=${encodeURIComponent(String(ongoingMatch.id))}&date=${encodeURIComponent(today)}`);
   };
 
   const handleViewOngoingDetail = () => {
-    console.log('View ongoing detail');
-    router.push('/care-history/detail');
+    if (!ongoingMatch) return;
+    router.push(`/care-history/detail?type=ongoing&matchId=${encodeURIComponent(String(ongoingMatch.id))}`);
   };
 
   return (
@@ -120,17 +192,24 @@ export default function CareHistoryScreen() {
             <TouchableOpacity
               style={styles.detailLink}
               onPress={handleViewOngoingDetail}
+              disabled={!ongoingMatch}
             >
               <Text style={styles.detailLinkText}>상세보기</Text>
               <Ionicons name="chevron-forward" size={16} color="#37383C9C" />
             </TouchableOpacity>
           </View>
 
-          <CareHistoryCard
-            record={MOCK_ONGOING_CARE}
-            variant="ongoing"
-            onWriteJournalPress={handleWriteJournalPress}
-          />
+          {ongoingMatch ? (
+            <CareHistoryCard
+              record={toOngoingRecord(ongoingMatch)}
+              variant="ongoing"
+              onWriteJournalPress={handleWriteJournalPress}
+            />
+          ) : (
+            <Text style={styles.emptyText}>
+              {loading ? '불러오는 중…' : '진행 중인 간병이 없습니다.'}
+            </Text>
+          )}
         </View>
 
         {/* 과거 간병 내역 섹션 */}
@@ -239,5 +318,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
     marginBottom: 20,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#6B7280',
+    paddingVertical: 8,
   },
 });
