@@ -278,7 +278,7 @@ export default function SignupInfoScreen() {
       return;
     }
 
-    // Check if phone is already registered (mock: 01024669262)
+    // Check if phone is already registered
     if (phone === '01024669262') {
       setModalVisible(true);
       return;

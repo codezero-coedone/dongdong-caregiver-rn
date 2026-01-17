@@ -157,7 +157,7 @@ export default function JobDetailScreen() {
                     {/* 지도 placeholder (Figma-style) */}
                     <View style={styles.mapPlaceholder}>
                         <View style={styles.mapNaverBadge}>
-                            <Text style={styles.mapNaverText}>NAVER</Text>
+                            <Text style={styles.mapNaverText}>지도</Text>
                         </View>
                         <View style={styles.mapCrosshair}>
                             <Ionicons name="add" size={14} color="#6B7280" />
