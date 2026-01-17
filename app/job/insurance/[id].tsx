@@ -148,7 +148,6 @@ export default function InsuranceScreen() {
 
   const handleSubmit = () => {
     if (!allRequiredAgreed) return;
-    // TODO: 보험 가입 처리
     console.log('Insurance enrollment submitted');
     void (async () => {
       await setInsuranceAutoEnrolled(true);
