@@ -20,8 +20,12 @@ type ApiJobDetail = {
     locationSummary: string;
     startDate: string;
     endDate: string;
+    patientName?: string;
     patientGender: string;
     patientAge: number;
+    patientBirthDate?: string;
+    patientHeight?: number;
+    patientWeight?: number;
     dailyRate: number;
     createdAt: string;
     location: string;
@@ -29,6 +33,8 @@ type ApiJobDetail = {
     patientDiagnosis: string;
     patientMobilityLevel: string;
     guardianName: string;
+    isMatched?: boolean;
+    patientAssistiveDevices?: string[];
 };
 
 const PRIMARY = '#0066FF';
@@ -79,20 +85,14 @@ export default function JobDetailScreen() {
         router.push(`/job/apply/${id}`);
     };
 
-    const isMatched = (j: ApiJobDetail | null): boolean => {
-        if (!j) return false;
-        const raw = j as any;
-        if (raw?.isMatched === true) return true;
-        const st = String(raw?.matchStatus || raw?.status || '').toUpperCase();
-        if (st === 'MATCHED' || st === 'ACTIVE' || st === 'COMPLETED') return true;
-        const diag = String(j.patientDiagnosis || '').trim();
-        // Backend sometimes returns empty/hidden fields before match; treat as "매칭 전" when diagnosis is missing.
-        if (!diag) return false;
-        if (diag.includes('매칭') && diag.includes('공개')) return false;
-        return true;
-    };
+    const matched = Boolean(job?.isMatched);
 
-    const matched = isMatched(job);
+    const genderLabel = (v: string | null | undefined): string => {
+        const s = String(v || '').toUpperCase();
+        if (s === 'MALE' || s === 'M') return '남';
+        if (s === 'FEMALE' || s === 'F') return '여';
+        return s || '-';
+    };
 
     const FieldBox = ({
         value,
@@ -189,19 +189,18 @@ export default function JobDetailScreen() {
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>근무 요일</Text>
-                        <InfoBox value={'미정'} />
+                        <InfoBox value={'-'} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>근무 시간</Text>
-                        <InfoBox value={'09:00 - 18:00 (하루 9시간)'} />
+                        <InfoBox value={'-'} />
                     </View>
 
                     <View style={styles.fieldGroup}>
                         <Text style={styles.fieldLabel}>전화 요청 시간 *</Text>
                         <FieldBox
-                            value={'09:00, 13:00'}
-                            right={<Ionicons name="checkmark-circle" size={18} color={PRIMARY} />}
+                            value={'-'}
                         />
                         <Text style={styles.helpText}>
                             환자가 미리 요청한 전화 시간입니다. 해당 시간에 연락해 주세요.
@@ -225,29 +224,45 @@ export default function JobDetailScreen() {
                     <View style={styles.patientCard}>
                         <View style={styles.patientTags}>
                             <InfoBox
-                                value={String(job.patientDiagnosis || '폐암 2기')}
+                                value={String(job.patientDiagnosis || '-')}
                                 variant={matched ? 'default' : 'secret'}
                                 style={styles.patientTag}
                             />
                         </View>
                         <Text style={styles.patientNameLine}>
-                            {matched ? `이환자 (${job.patientAge ?? 0}세, ${job.patientGender || '-'})` : `${job.patientAge ?? 0}세, ${job.patientGender || '-'}`}
+                            {matched
+                                ? `${String(job.patientName || '')} (${job.patientAge ?? 0}세, ${genderLabel(job.patientGender)})`
+                                : `${job.patientAge ?? 0}세, ${genderLabel(job.patientGender)}`}
                         </Text>
                         <View style={styles.patientMetaGrid}>
                             <View style={styles.patientMetaRow}>
                                 <Text style={styles.patientMetaLabel}>키</Text>
                                 <Text style={styles.patientMetaSep}>|</Text>
-                                <Text style={styles.patientMetaValue}>{matched ? '173cm' : '매칭 후 공개'}</Text>
+                                <Text style={styles.patientMetaValue}>
+                                    {matched
+                                        ? typeof job.patientHeight === 'number'
+                                            ? `${job.patientHeight}cm`
+                                            : '-'
+                                        : '매칭 후 공개'}
+                                </Text>
                             </View>
                             <View style={styles.patientMetaRow}>
                                 <Text style={styles.patientMetaLabel}>몸무게</Text>
                                 <Text style={styles.patientMetaSep}>|</Text>
-                                <Text style={styles.patientMetaValue}>{matched ? '60kg' : '매칭 후 공개'}</Text>
+                                <Text style={styles.patientMetaValue}>
+                                    {matched
+                                        ? typeof job.patientWeight === 'number'
+                                            ? `${job.patientWeight}kg`
+                                            : '-'
+                                        : '매칭 후 공개'}
+                                </Text>
                             </View>
                             <View style={styles.patientMetaRow}>
                                 <Text style={styles.patientMetaLabel}>진단명</Text>
                                 <Text style={styles.patientMetaSep}>|</Text>
-                                <Text style={styles.patientMetaValue}>{matched ? (job.patientDiagnosis || '-') : '매칭 후 공개'}</Text>
+                                <Text style={styles.patientMetaValue}>
+                                    {matched ? (job.patientDiagnosis || '-') : '매칭 후 공개'}
+                                </Text>
                             </View>
                         </View>
                     </View>
@@ -279,16 +294,8 @@ export default function JobDetailScreen() {
                     </View>
 
                     <View style={styles.fieldGroup}>
-                        <Text style={styles.fieldLabel}>선호하는 간병인의 성별</Text>
-                        <InfoBox value={'상관없음'} />
-                    </View>
-                    <View style={styles.fieldGroup}>
-                        <Text style={styles.fieldLabel}>간병시 식사 도움 여부</Text>
-                        <InfoBox value={'스스로 가능'} />
-                    </View>
-                    <View style={styles.fieldGroup}>
-                        <Text style={styles.fieldLabel}>간병시 배변 도움 여부</Text>
-                        <InfoBox value={'스스로 가능'} />
+                        <Text style={styles.fieldLabel}>요청 사항</Text>
+                        <InfoBox value={job.requirements ? String(job.requirements) : '-'} />
                     </View>
                         </View>
 

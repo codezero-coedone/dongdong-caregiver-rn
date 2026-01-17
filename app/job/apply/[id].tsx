@@ -38,6 +38,16 @@ export default function JobApplyScreen() {
   const [job, setJob] = useState<ApiJobDetail | null>(null);
   const [insuranceDone, setInsuranceDone] = useState(false);
 
+  const calcDays = (startIso: string | null | undefined, endIso: string | null | undefined): number => {
+    const s = startIso ? new Date(startIso) : null;
+    const e = endIso ? new Date(endIso) : null;
+    if (!s || !e) return 0;
+    const sm = s.getTime();
+    const em = e.getTime();
+    if (Number.isNaN(sm) || Number.isNaN(em)) return 0;
+    return Math.max(0, Math.ceil((em - sm) / (1000 * 60 * 60 * 24)));
+  };
+
   const formatYmd = (iso: string | null | undefined): string => {
     if (!iso) return '-';
     const d = new Date(iso);
@@ -162,9 +172,9 @@ export default function JobApplyScreen() {
                 </Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>총 근무 시간</Text>
+                <Text style={styles.infoLabel}>총 일수</Text>
                 <Text style={styles.infoValue}>
-                  {'미정'}
+                  {job ? `${calcDays(job.startDate, job.endDate)}일` : '-'}
                 </Text>
               </View>
             </View>
@@ -174,15 +184,17 @@ export default function JobApplyScreen() {
             {/* 급여 정보 */}
             <View style={styles.payInfo}>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>시급</Text>
+                <Text style={styles.infoLabel}>일급</Text>
                 <Text style={styles.infoValue}>
-                  {'-'}
+                  {job ? `${Number(job.dailyRate ?? 0).toLocaleString()}원` : '-'}
                 </Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>총 급여</Text>
                 <Text style={styles.totalPayValue}>
-                  {job ? `${Number(job.dailyRate ?? 0).toLocaleString()}원` : '-'}
+                  {job
+                    ? `${(Number(job.dailyRate ?? 0) * calcDays(job.startDate, job.endDate)).toLocaleString()}원`
+                    : '-'}
                 </Text>
               </View>
             </View>
