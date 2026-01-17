@@ -292,9 +292,7 @@ export default function SignupInfoScreen() {
       }
       setIsVerificationSent(true);
       setTimer(180); // 3 minutes
-      // DEV convenience: if backend returns "(DEV 코드: 1234)", auto-fill the code so QA can proceed fast.
-      const m = String(result.message || '').match(/DEV\s*코드:\s*(\d{4})/);
-      if (m && m[1]) setVerificationCode(m[1]);
+      // NOTE(OPS): DEV 코드 자동 채움 금지. 실운영에서는 SMS로만 인증해야 함.
       Alert.alert('알림', result.message || '인증번호를 발송했습니다.');
     } catch (error) {
       const e: any = error;
