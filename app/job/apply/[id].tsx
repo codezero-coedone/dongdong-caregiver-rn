@@ -130,7 +130,13 @@ export default function JobApplyScreen() {
           <View style={styles.headerPlaceholder} />
         </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         {/* 지원 매칭 정보 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>지원 매칭 정보</Text>

@@ -214,7 +214,13 @@ export default function CareerScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.frame}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         {/* 주의사항 배너 */}
         <View style={styles.warningBanner}>
           <Typography variant="label2.bold" color="#0066FF">

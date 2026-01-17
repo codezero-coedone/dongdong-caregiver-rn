@@ -129,7 +129,13 @@ export default function JobDetailScreen() {
                     <View style={styles.headerPlaceholder} />
                 </View>
 
-                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                    style={styles.content}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    nestedScrollEnabled
+                >
                     {loading && (
                         <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                             <ActivityIndicator size="large" color={PRIMARY} />

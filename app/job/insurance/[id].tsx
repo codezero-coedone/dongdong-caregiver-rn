@@ -170,7 +170,13 @@ export default function InsuranceScreen() {
         <View style={styles.headerPlaceholder} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         {/* 보험 소개 */}
         <View style={styles.section}>
           <Text style={styles.insuranceTitle}>

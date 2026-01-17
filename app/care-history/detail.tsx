@@ -140,7 +140,13 @@ export default function CareDetailScreen() {
 
         <View style={{ width: 24 }} />
       </View>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         {loading && (
           <View style={{ paddingVertical: 20 }}>
             <ActivityIndicator />

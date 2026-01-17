@@ -140,6 +140,9 @@ export default function IntroductionEditScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
       >
         {/* 자기소개 섹션 */}
         <View style={styles.section}>

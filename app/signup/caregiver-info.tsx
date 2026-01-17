@@ -141,7 +141,13 @@ export default function CaregiverInfoScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['bottom']}>
       <View style={{ flex: 1, width: '100%', maxWidth: 375, alignSelf: 'center' }}>
-      <ScrollView className="flex-1 px-6 pt-6">
+      <ScrollView
+        className="flex-1 px-6 pt-6"
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         {/* Warning Banner */}
         <WarningBanner message="허위 정보 기재 시 계정 제재 가능성 고지 알림" />
 

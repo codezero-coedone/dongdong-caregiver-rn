@@ -136,7 +136,13 @@ export default function ReviewsScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+        >
           <Text style={styles.title}>나의 리뷰</Text>
 
           <View style={styles.summaryCard}>

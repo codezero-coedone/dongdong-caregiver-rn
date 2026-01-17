@@ -476,7 +476,13 @@ export default function SignupInfoScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         {DEVTOOLS_ENABLED ? (
           <Text style={styles.screenHint}>DBG: 회원가입 필수 정보를 입력해 주세요.</Text>
         ) : null}

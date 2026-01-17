@@ -813,6 +813,9 @@ export default function CaregivingJournalHome() {
     <ScrollView
       contentContainerStyle={[styles.content, { paddingBottom: contentBottom }]}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      nestedScrollEnabled
     >
       {!embeddedInTabs && <Text style={styles.title}>간병일지</Text>}
 
@@ -969,6 +972,9 @@ export default function CaregivingJournalHome() {
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ padding: 16, gap: 10 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              nestedScrollEnabled
             >
               {matches.map((m) => (
                 <MatchPickRow key={m.id} m={m} />

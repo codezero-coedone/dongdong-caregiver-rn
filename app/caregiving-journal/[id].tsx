@@ -161,7 +161,13 @@ export default function JournalDetailScreen() {
           </Pressable>
         </View>
       ) : row ? (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+        >
           <View style={styles.headerBox}>
             <Text style={styles.headerTitle}>
               {row.patientName || '환자'} · {formatYmd(row.date)}

@@ -114,7 +114,13 @@ export default function PermissionScreen() {
         <View style={styles.headerSide} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         <Text style={styles.mainTitle}>
           안전하고 간편한 동동 이용을 위해{'\n'}
           아래 권한 허용이 필요해요.

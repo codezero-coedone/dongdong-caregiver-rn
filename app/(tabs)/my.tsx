@@ -354,6 +354,7 @@ export default function MyScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          nestedScrollEnabled
           contentContainerStyle={{ paddingBottom: contentBottom }}
         >
           {/* Profile Area */}
@@ -610,7 +611,13 @@ export default function MyScreen() {
 
       {/* 수익 Tab Content */}
       {activeTab === '수익' && (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+        >
           {/* 이번달 총 수익 */}
           <View style={styles.earningHeader}>
             <Text style={styles.earningTitle}>이번달 총 수익</Text>

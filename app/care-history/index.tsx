@@ -184,6 +184,9 @@ export default function CareHistoryScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
       >
         {/* 진행 중인 간병 섹션 */}
         <View style={styles.section}>

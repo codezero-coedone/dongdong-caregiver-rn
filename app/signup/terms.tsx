@@ -70,7 +70,13 @@ export default function TermsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.frame}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+      >
         {/* Title */}
         <Text style={styles.title}>
           약관에 동의하시면{'\n'}회원가입이 완료됩니다.

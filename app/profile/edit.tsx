@@ -241,6 +241,9 @@ export default function ProfileEditScreen() {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
       >
         {/* 회원 정보 섹션 */}
         <View style={styles.section}>

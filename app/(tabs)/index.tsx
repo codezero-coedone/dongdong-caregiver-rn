@@ -458,6 +458,7 @@ export default function HomeScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
+            nestedScrollEnabled
             contentContainerStyle={{ paddingBottom: contentBottom }}
             onScrollBeginDrag={() => setSortMenuOpen(false)}
           >
