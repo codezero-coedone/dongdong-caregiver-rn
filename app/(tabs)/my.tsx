@@ -30,6 +30,26 @@ const DEFAULT_USER = {
 const TABS = ['MY홈', '간병일지', '수익'];
 const PRIMARY = '#0066FF';
 
+type SettlementStatus =
+  | 'IN_PROGRESS'
+  | 'SETTLEMENT_PENDING_PAYMENT'
+  | 'SETTLEMENT_PENDING_ACCOUNT'
+  | 'SETTLEMENT_READY';
+
+type SettlementItem = {
+  id: string;
+  matchId: number;
+  requestId: string;
+  patientName: string;
+  startDate: string; // ISO
+  endDate: string; // ISO
+  amount: number;
+  status: SettlementStatus;
+  createdAt: string; // ISO
+  paymentConfirmed?: boolean;
+  bankAccountReady?: boolean;
+};
+
 export default function MyScreen() {
   const router = useRouter();
   const routeParams = useLocalSearchParams<{
@@ -44,6 +64,8 @@ export default function MyScreen() {
   const [myMatches, setMyMatches] = useState<any[]>([]);
   const [ongoingMatch, setOngoingMatch] = useState<any | null>(null);
   const [reviewPreview, setReviewPreview] = useState<any[]>([]);
+  const [settlements, setSettlements] = useState<SettlementItem[]>([]);
+  const lastReadyIdsRef = React.useRef<Set<string>>(new Set());
   const logout = useAuthStore((s) => s.logout);
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const insets = useSafeAreaInsets();
@@ -114,6 +136,7 @@ export default function MyScreen() {
       setMyMatches([]);
       setOngoingMatch(null);
       setReviewPreview([]);
+      setSettlements([]);
       setLoadingMy(false);
       return () => {
         alive = false;
@@ -144,6 +167,28 @@ export default function MyScreen() {
         } else {
           setReviewPreview([]);
         }
+
+        // Settlements (real data): caregiver earnings + payout readiness
+        const sRes = await api.get('/caregivers/settlements');
+        const sData = unwrapData<SettlementItem[]>((sRes as any)?.data);
+        const sArr = Array.isArray(sData) ? sData : [];
+        setSettlements(
+          sArr
+            .map((x) => ({
+              id: String((x as any)?.id || ''),
+              matchId: Number((x as any)?.matchId || 0),
+              requestId: String((x as any)?.requestId || ''),
+              patientName: String((x as any)?.patientName || '환자'),
+              startDate: String((x as any)?.startDate || ''),
+              endDate: String((x as any)?.endDate || ''),
+              amount: Number((x as any)?.amount || 0),
+              status: (String((x as any)?.status || 'IN_PROGRESS') as SettlementStatus),
+              createdAt: String((x as any)?.createdAt || ''),
+              paymentConfirmed: Boolean((x as any)?.paymentConfirmed),
+              bankAccountReady: Boolean((x as any)?.bankAccountReady),
+            }))
+            .filter((x) => x.id && Number.isFinite(x.amount)),
+        );
       } catch (e: any) {
         if (!alive) return;
         setMyError(
@@ -153,6 +198,7 @@ export default function MyScreen() {
         setMyMatches([]);
         setOngoingMatch(null);
         setReviewPreview([]);
+        setSettlements([]);
       } finally {
         if (alive) setLoadingMy(false);
       }
@@ -162,6 +208,21 @@ export default function MyScreen() {
       alive = false;
     };
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    // "앱 알림"(in-app): show a deterministic one-shot alert when a settlement becomes READY.
+    const nowReady = new Set(
+      (Array.isArray(settlements) ? settlements : [])
+        .filter((s) => s.status === 'SETTLEMENT_READY')
+        .map((s) => s.id),
+    );
+    const prev = lastReadyIdsRef.current;
+    const newlyReady = Array.from(nowReady).filter((id) => !prev.has(id));
+    lastReadyIdsRef.current = nowReady;
+    if (newlyReady.length > 0) {
+      Alert.alert('정산 알림', `정산 준비가 완료된 건이 ${newlyReady.length}건 있습니다.`);
+    }
+  }, [settlements]);
 
   const user = useMemo(() => {
     if (!profile) return DEFAULT_USER;
@@ -207,30 +268,27 @@ export default function MyScreen() {
     const monthStart = Date.UTC(y, m, 1);
     const monthEnd = Date.UTC(y, m + 1, 1) - 1;
 
-    const items = (Array.isArray(myMatches) ? myMatches : [])
-      .map((x) => {
-        const end = new Date(String(x?.endDate || ''));
+    const items = (Array.isArray(settlements) ? settlements : [])
+      .map((s) => {
+        const end = new Date(String(s?.endDate || ''));
         const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
-        const dailyRate = Number(x?.dailyRate ?? 0);
         const days =
-          x?.startDate && x?.endDate
-            ? calcDaysInclusive(String(x.startDate), String(x.endDate))
+          s?.startDate && s?.endDate
+            ? calcDaysInclusive(String(s.startDate), String(s.endDate))
             : 0;
-        const amount = Number.isFinite(dailyRate) ? dailyRate * days : 0;
         return {
-          id: String(x?.id ?? ''),
-          patientName: String(x?.patientName ?? '환자'),
-          startDate: String(x?.startDate ?? ''),
-          endDate: String(x?.endDate ?? ''),
-          dailyRate: Number.isFinite(dailyRate) ? dailyRate : 0,
+          id: String(s?.id ?? ''),
+          patientName: String(s?.patientName ?? '환자'),
+          startDate: String(s?.startDate ?? ''),
+          endDate: String(s?.endDate ?? ''),
           days,
-          amount,
+          amount: Number(s?.amount ?? 0),
           endUtc,
-          status: String(x?.status ?? ''),
+          status: s?.status as SettlementStatus,
         };
       })
       .filter((x) => x.id && x.endUtc >= monthStart && x.endUtc <= monthEnd)
-      .filter((x) => x.status === 'COMPLETED' || x.days > 0)
+      .filter((x) => x.days > 0 || Number.isFinite(x.amount))
       .sort((a, b) => b.endUtc - a.endUtc);
 
     const total = items.reduce(
@@ -242,7 +300,7 @@ export default function MyScreen() {
       0,
     );
     return { total, workDays, items };
-  }, [myMatches]);
+  }, [settlements]);
 
   const ongoingUi = useMemo(() => {
     if (!ongoingMatch) return null;
@@ -286,6 +344,20 @@ export default function MyScreen() {
         const color = half >= v - 0.5 ? '#FFD900' : '#E5E7EB';
         return <Ionicons key={index} name={name as any} size={16} color={color} />;
       });
+  };
+
+  const settlementStatusLabel = (s: SettlementStatus): string => {
+    switch (s) {
+      case 'SETTLEMENT_READY':
+        return '정산 준비 완료';
+      case 'SETTLEMENT_PENDING_ACCOUNT':
+        return '계좌 필요';
+      case 'SETTLEMENT_PENDING_PAYMENT':
+        return '입금 대기';
+      case 'IN_PROGRESS':
+      default:
+        return '진행 중';
+    }
   };
 
   function ReferralBanner() {
@@ -625,7 +697,7 @@ export default function MyScreen() {
               {Number(earnings.total || 0).toLocaleString()}원
             </Text>
             <Text style={styles.earningHint}>
-              * 정산 확정 전, 완료된 매칭(일 단가 × 기간) 기반의 추정치입니다.
+              * 정산/지급 상태는 실제 정산 내역 기준으로 표시됩니다.
             </Text>
           </View>
 
@@ -638,7 +710,7 @@ export default function MyScreen() {
               </Text>
             </View>
             <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-              <Text style={styles.summaryLabel}>완료 매칭</Text>
+              <Text style={styles.summaryLabel}>정산 내역</Text>
               <Text style={styles.summaryValue}>{earnings.items.length}건</Text>
             </View>
           </View>
@@ -646,7 +718,7 @@ export default function MyScreen() {
           {/* 출금 관련 */}
           <TouchableOpacity
             style={styles.linkRow}
-            onPress={() => Alert.alert('안내', '출금 계좌 설정 화면은 준비 중입니다.')}
+            onPress={() => router.push('/profile/bank-account')}
           >
             <Text style={styles.linkText}>출금 계좌 설정</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
@@ -682,7 +754,9 @@ export default function MyScreen() {
               earnings.items.map((it) => (
                 <View key={it.id} style={styles.earningCard}>
                   <View style={styles.earningCardTop}>
-                    <Text style={styles.noticeText}>매칭 #{it.id}</Text>
+                  <Text style={styles.noticeText}>
+                    {settlementStatusLabel(it.status as SettlementStatus)}
+                  </Text>
                     <Text style={styles.periodText}>
                       {formatYmd(it.startDate)} ~ {formatYmd(it.endDate)}
                     </Text>
